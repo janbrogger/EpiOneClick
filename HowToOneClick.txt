@@ -1,0 +1,25 @@
+Short description of the one-click-annotation method. 
+
+Dataset for paper2:
+The dataset for paper2 includes both IEDs and sharp transients in random order (consecutive EEGs). Some events are not epileptiform so that the channel/wave to click may not be obvious.
+
+Bullet points for successful annotation:
+
+-Choose optimal channel.
+Preferably, click a channel that is listed in the event-property info window to increase the probability that the intended visually scored event is annotated (allthough unlikely, several events may have been scored on the same EEG-page). 
+
+-Choose optimal wave.
+Click on the peak of the waveform you consider to be the most epileptiform with the criteria in mind.
+
+-Check result.
+A window will pop up showing the result of auto-annotation. If the spike peak hits the mark, the annotation was successful. If not, close pop-up window and try again. Click more precisely close to the peak.
+
+-Autoannotation pop-up-window legend:
+First blue mark: Spike start. 
+Red mark: Peak. 
+Second blue mark: Spike end and slow-wave start. 
+Third blue mark: Slow-wave end.
+Additionally: The green dots show other local minima considered as waveform limits, a green line showing a smoothed helping signal to find slow-wave end, and a red line showing the Gauss-fit.
+
+-Validation
+The autoannotation was run on the dataset from paper1 using only annotated peak-markings, with a realatively good result.

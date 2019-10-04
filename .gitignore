@@ -1,0 +1,6 @@
+/eegsnippets/**
+/eegsnippetsplus/**
+/1b-Matlab/data/**
+**/data/**
+*.asv
+*.dta

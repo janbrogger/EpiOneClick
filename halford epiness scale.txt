@@ -1,0 +1,5 @@
+1-definitely not an epileptiform discharge
+2-not likely an epileptiform discharge
+3-not sure could go either way 
+4-likely an epileptiform discharge
+5-definitely an epileptiform discharge
