@@ -351,7 +351,7 @@ function out = qIEDScorePipeline(electrode,sample)
     snippet.sduration = sduration(chan);
 
     [filepath,name,ext] = fileparts(EEG.setname);
-    fileName = ['snippet_' name ];
+    fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
     filePath = fullfile(pwd, fileName);            
     save(filePath, 'snippet');
 
