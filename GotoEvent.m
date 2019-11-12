@@ -12,12 +12,12 @@ function GotoEvent(seconds)
         %EEG = evalin('base','EEG');
         
         %Add a little buffer on the left side
-        seconds2 = min(1,seconds-1);
+        seconds2 = max(1,seconds-1);
         
         EPosition = findobj('tag','EPosition','parent',existingPlot); % ui handle
-        set(EPosition, 'string', num2str(seconds2));
-
-        %evalin('base','eegplot(''drawp'', 0);');    
-        eegplot('drawp', 0, '', existingPlot);        
+        if ~isempty(EPosition) 
+            set(EPosition, 'String', seconds2);
+            eegplot('drawp', 0, '', existingPlot);
+        end                
     end
 end
