@@ -20,12 +20,12 @@ function MouseDown(varargin)
             g.selectedChannel = selectedChannel.labels;
             
             autoannotation = qIEDAnnotation(selectedChannelIndex,clickedSample);
-            disp('Annotation results:');
-            disp(autoannotation);
-            g.scoreClickedSample = autoannotation{1};
-            g.scoreClickedSample = [g.scoreClickedSample autoannotation{2}];
-            g.scoreClickedSample = [g.scoreClickedSample autoannotation{3}];
-            g.scoreClickedSample = [g.scoreClickedSample autoannotation{4}];
+%             disp('Annotation results:');
+%             disp(autoannotation);
+%             g.scoreClickedSample = autoannotation{1};
+%             g.scoreClickedSample = [g.scoreClickedSample autoannotation{2}];
+%             g.scoreClickedSample = [g.scoreClickedSample autoannotation{3}];
+%             g.scoreClickedSample = [g.scoreClickedSample autoannotation{4}];
             g.annotationState = 'WaitingForFirstClick';            
         end                     
     end    
