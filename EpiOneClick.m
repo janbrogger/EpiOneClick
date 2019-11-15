@@ -1,7 +1,6 @@
-function openSuccess = OpenEegFileInEeglab(filePath)
+function EpiOneClick(filePath)
 
     disp(['Opening new EEG file ' filePath] );    
-    openSuccess = 0;
     %Start up EEGLAB if pop_fileio is not in the path   
     if not(exist('pop_fileio', 'file'))
         eeglab
@@ -18,7 +17,11 @@ function openSuccess = OpenEegFileInEeglab(filePath)
     end
     
     if not(exist(filePath, 'file'))
-       ClearEeglabStudy()
+        assignin('base','STUDY', []); 
+        assignin('base','CURRENTSTUDY', 0); 
+        assignin('base','ALLEEG', []); 
+        assignin('base','EEG', []); 
+        assignin('base','CURRENTSET', []);  
     else        
         try 
             EEG = pop_fileio(filePath);                
@@ -85,23 +88,26 @@ function openSuccess = OpenEegFileInEeglab(filePath)
             eeg_checkset( EEG );                          
             
             evalin('base', 'eeglab redraw');
-            figh = GetEeglabPlot(0);
-                        
-            set(figh, 'WindowButtonDownFcn', {@MouseDown});
+                              
+            % Get EEGLAB plot
+            existingPlot = findobj(0, 'tag', 'EEGPLOT');
+            if isempty(existingPlot)
+                warning('No EEG plot open in EEGLAB');
+            elseif size(existingPlot,1)>1                        
+                warn('More than one EEGPLOT open, using the first one');                        
+                existingPlot = existingPlot(1);        
+            end                           
             
-            openSuccess = 1;
+            %Attach mouse handler
+            set(existingPlot, 'WindowButtonDownFcn', {@MouseDown});            
         catch ME
             error(ME.message);
-            ClearEeglabStudy()
+            assignin('base','STUDY', []); 
+            assignin('base','CURRENTSTUDY', 0); 
+            assignin('base','ALLEEG', []); 
+            assignin('base','EEG', []); 
+            assignin('base','CURRENTSET', []);  
         end
     end
-end
-
-function ClearEeglabStudy()
-        assignin('base','STUDY', []); 
-        assignin('base','CURRENTSTUDY', 0); 
-        assignin('base','ALLEEG', []); 
-        assignin('base','EEG', []); 
-        assignin('base','CURRENTSET', []);  
 end
 
