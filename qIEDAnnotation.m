@@ -1,4 +1,4 @@
-% qIEDScorePipeline() - Purpose: To annotate IEDs automatically only from manually marked peaks, 
+njkqwe% qIEDScorePipeline() - Purpose: To annotate IEDs automatically only from manually marked peaks, 
 %   and then compare the resulting measures with results from manual
 %   annotations.
 % Usage:
@@ -32,7 +32,9 @@
 
 function out = qIEDScorePipeline(electrode,sample)
     EEG = evalin('base','EEG');
-
+    srate = EEG.srate;
+    samplescale = 1/500*srate;
+    
     % Declare qIED parameters
     sharpness = [];
     onsetslope = [];
@@ -55,7 +57,7 @@ function out = qIEDScorePipeline(electrode,sample)
     % x- and y-values for signal around peak.
 
     %handle edge case of click very close to the beginning or end
-    siglengthBefore=500;
+    siglengthBefore=srate*2;
     siglengthAfter=siglengthBefore;
     edgeCase=0;
     if (clicksample-siglengthBefore) < 1
@@ -76,7 +78,7 @@ function out = qIEDScorePipeline(electrode,sample)
 
     x = 1:1:length(signal);
     t_spikepeak = ceil(length(signal)/2);
-    searchdistance = 25;
+    searchdistance = round(25*samplescale);
     xaroundpeak = t_spikepeak-searchdistance:1:t_spikepeak+searchdistance;
     yaroundpeak = signal(xaroundpeak);
     %locate peak indexes, then convert x-values back to global index
@@ -95,7 +97,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %has a lower voltage and delta x is lower than 0.625 delta y, then
     %replace spike start with this minimum. 0.625 relates to aspect ratio
     %in visual analysis (1cm per ?V and 3cm per second).
-    searchdistance = 100;
+    searchdistance = round(100*samplescale);
     xaroundstart = t_spikepeak-searchdistance:1:t_spikepeak;
     yaroundstart = signal(xaroundstart);
     [minimalogic, minimaprominence] = islocalmin(yaroundstart);
@@ -118,7 +120,7 @@ function out = qIEDScorePipeline(electrode,sample)
         tempVolt = signal(tempminimum);
         if(acurrentVolt > tempVolt)
             break;        
-        elseif(ainterslope > 0.6)
+        elseif(ainterslope > 0.6*srate/500)
             tempminimum = xstartminima(i);
             tempminimumy = signal(tempminimum);
         end        
@@ -132,7 +134,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %First, go with the local minimum furthest away from peak. If there is 
     %another local minimum closer to peak for which the slope doubles and higher
     %matlabprominence, or if voltage is lower, choose this minimum instead.
-    lesserend = min(IEDspikepeak+100, length(signal)); 
+    lesserend = min(IEDspikepeak+(100*samplescale), length(signal)); 
     xaroundend = IEDspikepeak:1:lesserend;
     yaroundend = signal(xaroundend);
     [minimalogic, minimaprominence] = islocalmin(yaroundend);
@@ -155,7 +157,7 @@ function out = qIEDScorePipeline(electrode,sample)
         tempVolt = signal(tempminimum);
         if(bcurrentVolt > tempVolt)
             break;
-        elseif( binterslope < -0.6)
+        elseif( binterslope < -0.6*srate/500)
             tempminimum = xendminima(i);
             tempminimumy = signal(tempminimum);
         end    
@@ -175,15 +177,15 @@ function out = qIEDScorePipeline(electrode,sample)
     % of high voltage difference between start and stop.
     % Exaxtareagfitsubtrapz subtracts area under line between start and
     % stop voltage.
-    minstartpos = IEDspikeend+83;
-    lesserend = min(IEDspikeend+400, length(signal));
+    minstartpos = IEDspikeend+83*samplescale;
+    lesserend = min(IEDspikeend+400*samplescale, length(signal));
     hasSlow = minstartpos < length(signal);
     %calculate slow-wave only if the signal is long enough for a slow wave
 
     slowX = (IEDspikeend:1:lesserend);
     slowsignal = [slowX; signal(slowX)];
     slowXformin = IEDspikeend:1:lesserend;
-    slowYformin = smoothdata(signal(slowXformin),2,'movmean',83);
+    slowYformin = smoothdata(signal(slowXformin),2,'movmean',(83*samplescale));
     [slowminima, slowminimaprominences] = islocalmin(slowYformin); 
     %inverseslowY = max(slowYformin)-slowYformin; %try findpeaks method
     %[Minima, MinIdx] = findpeaks(inverseslowY); %try findpeaks method
@@ -235,8 +237,8 @@ function out = qIEDScorePipeline(electrode,sample)
         sAfterDischargeLength = length(slowsignal(2, :));
         sAfterDischargeLastidx = slowsignal(1,sAfterDischargeLength);
         sAfterDischargeFirstidx = slowsignal(1,1);
-        gfoptions.Lower = [-2000 sAfterDischargeFirstidx 0];
-        gfoptions.Upper = [2000 sAfterDischargeLastidx (sAfterDischargeLength)];
+        gfoptions.Lower = [(-2000*samplescale) sAfterDischargeFirstidx 0];
+        gfoptions.Upper = [(2000*samplescale) sAfterDischargeLastidx (sAfterDischargeLength)];
         sADareaforplot = 0; integralgfit = 0; exactareagfit = 0; exactareagfitsubtrapz = 0; integraltrapz = 0;
 
         gfit = fit(slowsignal(1, :).', (slowsignal(2, :)+afterDischShift).','gauss1', gfoptions);
@@ -254,7 +256,7 @@ function out = qIEDScorePipeline(electrode,sample)
         IEDslowend = IEDspikeend;
         IEDslowendy = IEDspikeendy;
     end %hasslow
-    sduration(chan) = (IEDspikeend - IEDspikestart)*2;
+    sduration(chan) = (IEDspikeend - IEDspikestart)*2*samplescale;
     %First halfwave (FH_)
     onsetpeakexactAmplitude = signal(IEDspikepeak) - signal(IEDspikestart);
     onsetpeakamplitude = round(onsetpeakexactAmplitude); onsetampl(chan) = onsetpeakamplitude;
@@ -273,7 +275,7 @@ function out = qIEDScorePipeline(electrode,sample)
 
     %Frost used 1 sample per 4 msec and calculated 2nd derivate aroun 5
     %samplepoints. We use 500 samples/sec, 1sample/2msec. 
-    frostx = (IEDspikepeak-4):2:(IEDspikepeak+4);
+    frostx = (IEDspikepeak-round(4*samplescale)):round(2*samplescale):(IEDspikepeak+round(4*samplescale));
     frosty = signal(frostx);
     frostsharpness(chan) = (abs( (frosty(5)-(2*frosty(3))+frosty(1))/2 ))/4;             
 
