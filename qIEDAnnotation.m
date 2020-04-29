@@ -320,7 +320,7 @@ function out = qIEDScorePipeline(electrode,sample)
     
     %Calculate the Bergen Epileptiform Morphology Score
     %BEMS Age
-    input_hf = str2double(input('Enter an integer: ', 's'));
+    input_hf = str2double(input('Enter age (integer): ', 's'));
     while isnan(input_hf) || fix(input_hf) ~= input_hf
       input_hf = str2double(input('Please enter and INTEGER: ', 's'));
     end
@@ -339,9 +339,9 @@ function out = qIEDScorePipeline(electrode,sample)
     BEMS_descamp = 0;
     if(deschampl(chan) < 70)
         BEMS_descamp = 1;
-    elseif(deschampl(chan) < 90)
+    elseif(deschampl(chan) >= 70 && deschampl(chan) < 90)
         BEMS_descamp = 0;
-    elseif(deschampl(chan) < 120)
+    elseif(deschampl(chan) >= 90 && deschampl(chan) < 120)
         BEMS_descamp = 7;
     elseif(deschampl(chan) >= 120)
         BEMS_descamp = 17;
@@ -349,13 +349,13 @@ function out = qIEDScorePipeline(electrode,sample)
     %BEMS onset slope
     BEMS_onsslope = 0;
     
-    if(onsetslope(chan) < 1)
+    if(onsetslope(chan) < 0.5) %samples, not ms.
         BEMS_onsslope = 0;
-    elseif(onsetslope(chan) < 2)
+    elseif(onsetslope(chan) >= 0.5 && onsetslope(chan) < 0.75)
         BEMS_onsslope = 4;
-    elseif(onsetslope(chan) < 3)
+    elseif(onsetslope(chan) >= 0.75 && onsetslope(chan) < 1)
         BEMS_onsslope = 5;
-    elseif(onsetslope(chan) >= 4)
+    elseif(onsetslope(chan) >= 1)
         BEMS_onsslope = 11;
     end
     %BEMS spike to background power
@@ -412,9 +412,9 @@ function out = qIEDScorePipeline(electrode,sample)
     fig_so = scatter(IEDspikestart, IEDspikestarty,9, 'blue');
     fig_se = scatter(IEDspikeend, IEDspikeendy,9,'blue');
     str_x = sprintf('%0.2f',frostsharpness(chan));
-    str_y = sprintf('%0.2f', onsetslope(chan));   
-    str_z = sprintf('%0.2f', descslope(chan));  
-    str_xx = sprintf('%0.2f', sduration(chan));
+    str_y = sprintf('%0.2f', onsetslope(chan)*1000/srate); %convert to µV/msec  
+    str_z = sprintf('%0.2f', descslope(chan)*1000/srate); %convert to µV/msec 
+    str_xx = sprintf('%0.2f', sduration(chan)*1000/srate); %convert to µV/msec 
     str_yy = sprintf('%0.2f', onsetampl(chan));
     str_zz = sprintf('%0.2f', deschampl(chan));
     str_bems = sprintf('%0.0f', BEMS_score);
@@ -458,9 +458,16 @@ function out = qIEDScorePipeline(electrode,sample)
     snippet.hasSlow = hasSlow;
     snippet.slowEndX = IEDslowend;
     snippet.sduration = sduration(chan);
+    snippet.BEMS_age = BEMS_age;
+    snippet.BEMS_descamp = BEMS_descamp;
+    snippet.BEMS_onsslope = BEMS_onsslope;
+    snippet.BEMS_spiketobg = BEMS_spiketobg;
+    snippet.BEMS_slow = BEMS_slow;
+    snippet.BEMS = BEMS_score;    
 
-    [filepath,name,ext] = fileparts(EEG.setname);
+    [filepath,name,ext] = fileparts(EEG.setname);    
     fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
+    snippet.BEMS_filename = fileName;
     filePath = fullfile(pwd, fileName);            
     save(filePath, 'snippet');
 
