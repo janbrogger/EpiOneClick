@@ -1,4 +1,4 @@
-njkqwe% qIEDScorePipeline() - Purpose: To annotate IEDs automatically only from manually marked peaks, 
+% qIEDScorePipeline() - Purpose: To annotate IEDs automatically only from manually marked peaks, 
 %   and then compare the resulting measures with results from manual
 %   annotations.
 % Usage:
@@ -56,8 +56,9 @@ function out = qIEDScorePipeline(electrode,sample)
     % Find all peaks. Select most prominent and narrow as spike peak.
     % x- and y-values for signal around peak.
 
-    %handle edge case of click very close to the beginning or end
-    siglengthBefore=srate*2;
+    %Handle edge case of click very close to the beginning or end
+    %Require 200 ms + 2 seconds before peak (for background calculations)
+    siglengthBefore=srate*2+round(100*samplescale);
     siglengthAfter=siglengthBefore;
     edgeCase=0;
     if (clicksample-siglengthBefore) < 1
@@ -277,7 +278,110 @@ function out = qIEDScorePipeline(electrode,sample)
     %samplepoints. We use 500 samples/sec, 1sample/2msec. 
     frostx = (IEDspikepeak-round(4*samplescale)):round(2*samplescale):(IEDspikepeak+round(4*samplescale));
     frosty = signal(frostx);
-    frostsharpness(chan) = (abs( (frosty(5)-(2*frosty(3))+frosty(1))/2 ))/4;             
+    frostsharpness(chan) = (abs( (frosty(5)-(2*frosty(3))+frosty(1))/2 ))/4;   
+    
+    %Try FFT-analysis of preceding epoch if signal has enough samples
+    %(2*srate).     
+    fftpowerratio = NaN;
+    ongoingBG_RMS = NaN;    
+    if(IEDspikestart >= (2*srate+1))
+        %Save 2*srate samples preceding IED
+        ongoingBG = signal(IEDspikestart-1 - (2*srate) : (IEDspikestart-1));
+        spikesignal = signal(IEDspikestart : IEDspikeend);
+        Nspikesignal = length(spikesignal);   
+        NongoingBG = length(ongoingBG);
+
+        % X-axis for frequency domain plots and max hz at our lowpass
+        %500 bins, should be spaced 0,5 Hz.
+        hz = linspace(0, srate/2, floor(NongoingBG/2)+1); 
+        %Find index in hz-vector for where element is 50Hz
+        [~, hzmaxidx] = find(hz==50); 
+
+        % Convert IED-duration to band in Hz. We use +- 10% of duration,
+        % then divide sample rate by upper/lower duration bound.
+        spikedurshort = sduration(chan) * 0.9;
+        spikedurlong = sduration(chan) * 1.1;
+        spikehzhigh = srate/spikedurshort;
+        spikehzlow = srate/spikedurlong;
+        %Locate the index in hz-vector. For integration and plotting.
+        [~, lowidx] = min(abs(hz-spikehzlow));
+        [~, highidx] = min(abs(hz-spikehzhigh));        
+
+        % FFT 2 second window of background activity preceding IED.
+        ongoingBGX = fft(ongoingBG);
+        %Total power starting arbitrarily at index 5, or 2,5 Hz.
+        totalpower    = (trapz(hz(5:hzmaxidx), (2*abs(ongoingBGX(5:hzmaxidx))/length(ongoingBG)).^2)); %Total AUC/power for preceding background  
+        fftcriterion2 = (trapz(hz(lowidx:highidx),(2*abs(ongoingBGX(lowidx:highidx))/length(ongoingBG)).^2)); %Power within band corresponding to IED
+        fftpowerratio = fftcriterion2/totalpower;
+
+        % Root-mean-square of background activity preceding IED
+        ongoingBG_RMS = rms(ongoingBG);
+    end   
+    
+    %Calculate the Bergen Epileptiform Morphology Score
+    %BEMS Age
+    input_hf = str2double(input('Enter an integer: ', 's'));
+    while isnan(input_hf) || fix(input_hf) ~= input_hf
+      input_hf = str2double(input('Please enter and INTEGER: ', 's'));
+    end
+    BEMS_age = 0;
+    if(input_hf < 10)
+        BEMS_age = 16;
+    elseif(input_hf < 20)
+        BEMS_age = 0;
+    elseif(input_hf < 60)
+        BEMS_age = 12;
+    elseif(input_hf >= 60)
+        BEMS_age = 25;
+    end
+    
+    %BEMS Descending amplitude
+    BEMS_descamp = 0;
+    if(deschampl(chan) < 70)
+        BEMS_descamp = 1;
+    elseif(deschampl(chan) < 90)
+        BEMS_descamp = 0;
+    elseif(deschampl(chan) < 120)
+        BEMS_descamp = 7;
+    elseif(deschampl(chan) >= 120)
+        BEMS_descamp = 17;
+    end
+    %BEMS onset slope
+    BEMS_onsslope = 0;
+    
+    if(onsetslope(chan) < 1)
+        BEMS_onsslope = 0;
+    elseif(onsetslope(chan) < 2)
+        BEMS_onsslope = 4;
+    elseif(onsetslope(chan) < 3)
+        BEMS_onsslope = 5;
+    elseif(onsetslope(chan) >= 4)
+        BEMS_onsslope = 11;
+    end
+    %BEMS spike to background power
+    BEMS_spiketobg = 0;
+    if(fftpowerratio >= 8.6)
+        BEMS_spiketobg = 0;
+    elseif(fftpowerratio >= 4.7)
+        BEMS_spiketobg = 9;
+    elseif(fftpowerratio >= 2.6)
+        BEMS_spiketobg = 6;
+    elseif(fftpowerratio < 2.6)
+        BEMS_spiketobg = 14;
+    end
+    %BEMS slow after-wave area
+    BEMS_slow = 0;
+    if(exactareagfitsubtrapz/srate < 5)
+        BEMS_slow = 0;
+    elseif(exactareagfitsubtrapz/srate < 10)
+        BEMS_slow = 6;
+    elseif(exactareagfitsubtrapz/srate < 20)
+        BEMS_slow = 11;
+    elseif(exactareagfitsubtrapz/srate >= 20)
+        BEMS_slow = 19;
+    end   
+    %BEMS total
+    BEMS_score = BEMS_age + BEMS_descamp + BEMS_onsslope + BEMS_spiketobg + BEMS_slow;
 
     %Plot the IED template
     Nxtime = length(signal);
@@ -313,6 +417,7 @@ function out = qIEDScorePipeline(electrode,sample)
     str_xx = sprintf('%0.2f', sduration(chan));
     str_yy = sprintf('%0.2f', onsetampl(chan));
     str_zz = sprintf('%0.2f', deschampl(chan));
+    str_bems = sprintf('%0.0f', BEMS_score);
     legend([fig_signal fig_IED fig_slow_aprox fig_sp fig_so],'EEG signal', 'IED signal', 'Slow-wave approximation', 'Spike peak', 'Spike onset, spike end and slow-wave end', 'Location', 'southoutside')
     pbaspect([xaspectr yaspectr 1]);
 
@@ -327,6 +432,8 @@ function out = qIEDScorePipeline(electrode,sample)
         resultline3 = strcat(['Slowwave: ', str_ss]);
         text(0.1, 0.4, resultline3);
     end
+    resultline4 = strcat(['BEMS: ', str_bems]);
+    text(0.1, 0.2, resultline4);
     set(gca, 'xtick', [], 'ytick', []);
     out = {IEDspikestart+clicksample-siglengthBefore, IEDspikepeak+clicksample-siglengthBefore, IEDspikeend+clicksample-siglengthBefore, IEDslowend+clicksample-siglengthBefore};
 
