@@ -57,15 +57,15 @@ function out = qIEDScorePipeline(electrode,sample)
     % x- and y-values for signal around peak.
 
     %Handle edge case of click very close to the beginning or end
-    %Require 200 ms + 2 seconds before peak (for background calculations)
-    siglengthBefore=srate*2+round(100*samplescale);
+   
+    siglengthBefore=srate*2+1+round(100*samplescale);
     siglengthAfter=siglengthBefore;
-    edgeCase=0;
-    if (clicksample-siglengthBefore) < 1
+    edgeCase=0; 
+    if (clicksample-(siglengthBefore)) < 1 %Require 200 ms + 2 seconds before peak (for background calculations)
         edgeCase=1;
         siglengthBefore=clicksample-1;
     end
-    if (clicksample+siglengthAfter) > size(eegdata,2)
+    if (clicksample+(siglengthBefore)) > size(eegdata,2)
         edgeCase=1;
         siglengthAfter=size(eegdata,2)-clicksample;
     end
@@ -284,7 +284,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %(2*srate).     
     fftpowerratio = NaN;
     ongoingBG_RMS = NaN;    
-    if(IEDspikestart >= (2*srate+1))
+    if(edgeCase==0)
         %Save 2*srate samples preceding IED
         ongoingBG = signal(IEDspikestart-1 - (2*srate) : (IEDspikestart-1));
         spikesignal = signal(IEDspikestart : IEDspikeend);
@@ -299,8 +299,8 @@ function out = qIEDScorePipeline(electrode,sample)
 
         % Convert IED-duration to band in Hz. We use +- 10% of duration,
         % then divide sample rate by upper/lower duration bound.
-        spikedurshort = sduration(chan) * 0.9;
-        spikedurlong = sduration(chan) * 1.1;
+        spikedurshort = sduration(chan) / 2 * 0.9;
+        spikedurlong = sduration(chan) / 2 * 1.1;
         spikehzhigh = srate/spikedurshort;
         spikehzlow = srate/spikedurlong;
         %Locate the index in hz-vector. For integration and plotting.
@@ -320,18 +320,18 @@ function out = qIEDScorePipeline(electrode,sample)
     
     %Calculate the Bergen Epileptiform Morphology Score
     %BEMS Age
-    input_hf = str2double(input('Enter age (integer): ', 's'));
-    while isnan(input_hf) || fix(input_hf) ~= input_hf
-      input_hf = str2double(input('Please enter and INTEGER: ', 's'));
+    input_age = str2double(input('Enter age (integer): ', 's'));
+    while isnan(input_age) || fix(input_age) ~= input_age
+      input_age = str2double(input('Please enter and INTEGER: ', 's'));
     end
     BEMS_age = 0;
-    if(input_hf < 10)
+    if(input_age < 10)
         BEMS_age = 16;
-    elseif(input_hf < 20)
+    elseif(input_age < 20)
         BEMS_age = 0;
-    elseif(input_hf < 60)
+    elseif(input_age < 60)
         BEMS_age = 12;
-    elseif(input_hf >= 60)
+    elseif(input_age >= 60)
         BEMS_age = 25;
     end
     
@@ -360,13 +360,13 @@ function out = qIEDScorePipeline(electrode,sample)
     end
     %BEMS spike to background power
     BEMS_spiketobg = 0;
-    if(fftpowerratio >= 8.6)
+    if(fftpowerratio*100 >= 8.6) %convert ratio to percent
         BEMS_spiketobg = 0;
-    elseif(fftpowerratio >= 4.7)
+    elseif(fftpowerratio*100 >= 4.7)
         BEMS_spiketobg = 9;
-    elseif(fftpowerratio >= 2.6)
+    elseif(fftpowerratio*100 >= 2.6)
         BEMS_spiketobg = 6;
-    elseif(fftpowerratio < 2.6)
+    elseif(fftpowerratio*100 < 2.6)
         BEMS_spiketobg = 14;
     end
     %BEMS slow after-wave area
@@ -414,7 +414,7 @@ function out = qIEDScorePipeline(electrode,sample)
     str_x = sprintf('%0.2f',frostsharpness(chan));
     str_y = sprintf('%0.2f', onsetslope(chan)*1000/srate); %convert to µV/msec  
     str_z = sprintf('%0.2f', descslope(chan)*1000/srate); %convert to µV/msec 
-    str_xx = sprintf('%0.2f', sduration(chan)*1000/srate); %convert to µV/msec 
+    str_xx = sprintf('%0.2f', sduration(chan)); 
     str_yy = sprintf('%0.2f', onsetampl(chan));
     str_zz = sprintf('%0.2f', deschampl(chan));
     str_bems = sprintf('%0.0f', BEMS_score);
@@ -428,7 +428,7 @@ function out = qIEDScorePipeline(electrode,sample)
     hold on;
     text(0.1, 0.6, resultline2);
     if(hasSlow)
-        str_ss = sprintf('%0.2f', exactareagfitsubtrapz/siglengthAfter);
+        str_ss = sprintf('%0.2f', exactareagfitsubtrapz/srate);
         resultline3 = strcat(['Slowwave: ', str_ss]);
         text(0.1, 0.4, resultline3);
     end
@@ -463,7 +463,8 @@ function out = qIEDScorePipeline(electrode,sample)
     snippet.BEMS_onsslope = BEMS_onsslope;
     snippet.BEMS_spiketobg = BEMS_spiketobg;
     snippet.BEMS_slow = BEMS_slow;
-    snippet.BEMS = BEMS_score;    
+    snippet.BEMS = BEMS_score;  
+    snippet.patientage = input_age;
 
     [filepath,name,ext] = fileparts(EEG.setname);    
     fileName = ['snippet_' name '_' num2str(IEDspikestart) ];

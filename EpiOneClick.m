@@ -43,7 +43,7 @@ function EpiOneClick(filePath)
             EEG = eeg_checkset( EEG );
 
             disp('Looking for EKG and photic...');
-            ekgindex = find(strcmp({EEG.chanlocs(:).labels}, 'EKG'));
+            ekgindex = find(strcmp({EEG.chanlocs(:).labels}, 'P EKG')); %chanloc name changed for Kumar dataset
             photicindex = find(strcmp({EEG.chanlocs(:).labels}, 'Photic'));                        
             
             disp('Flipping data');
