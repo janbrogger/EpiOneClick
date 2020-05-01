@@ -20,7 +20,7 @@ function varargout = SnippetMeasures(userid, doPlot, doPlotfit, doTitle, saveMea
 userstr = num2str(userid);
 
 % Declare root folder containing EEG-snippets and check that it exists.
-rootFolder = ['\\ihelse.net\Forskning\hbe\2017-01512\2019\EivindArtikkel2\data\03-ExtractQIED\User_' userstr '\'];
+rootFolder = ['C:\Midlertidig_Lagring\EpiOneClick\Kural dataset snippets\User_' userstr '\'];
 if ~isfolder(rootFolder)
     errorMessage = sprintf('Error, folder %s does not exist', rootFolder);
     uiwait(fprintf(errorMessage));
@@ -78,7 +78,7 @@ UsersSnippets.numberOfSelected = [];
 userstring = ['User_' userstr];
 % Abort if folder is not named "User_*"
 
-filePattern = fullfile(rootFolder, '\snippets\', 'snippet*.mat');
+filePattern = fullfile(rootFolder, '\snippets\', 'S*.mat');
 theFiles = dir(filePattern);
 % Exit if no snippet-files.
 if(isempty(theFiles))
@@ -97,14 +97,9 @@ for k = 1 : length(theFiles)
         % Spike amplitude, slope from spike onset to peak, slope from spike
         % onset to half maximum to peak.
         epiAnno = load(fullFileName);
-        if(userid ~= epiAnno.snippet.UserID)
-            fprintf('A snippet had the wrong userID.');
-            return;
-        end
         srate = epiAnno.snippet.srate;
-        halford = epiAnno.snippet.halford;
-        SearchResultID = epiAnno.snippet.SearchResultEventId;
-        t_spikestart = epiAnno.snippet.spikeStart;
+        samplescale = (1/500)*srate; %This variable replaces originally project specific hardcoded sample-related calculations.
+        t_spikestart = epiAnno.snippet.spikeStartX;
         t_spikepeak = epiAnno.snippet.spikePeak;
         t_spikeend = epiAnno.snippet.spikeEnd;
         t_afterslowend = epiAnno.snippet.afterDischargeEnd;
@@ -116,16 +111,6 @@ for k = 1 : length(theFiles)
         signalHalfWave1 = x_signal(:, t_spikestart:t_spikepeak);
         signalHalfWave2 = x_signal(:, t_spikepeak:t_spikeend);
         signalSpike = [signalHalfWave1 signalHalfWave2(:,2:length(signalHalfWave2))];
-
-        %Extract localization data from messy string
-
-        numberOfSelected = regexp(epiAnno.snippet.localization, 'Selected \( (\d*) \):', 'tokens');
-        if isempty(numberOfSelected)
-            numberOfSelected = 0;
-        else        
-            numberOfSelected = str2num(char(numberOfSelected{1}));
-        end
-        disp(['Number of selected: ' num2str(numberOfSelected)]);
 
         %Get annotated IED-points for scatter plot. Peak set as time 0.
         annoStartx = t_spikestart - t_spikepeak;
@@ -178,9 +163,9 @@ for k = 1 : length(theFiles)
         %Frost used 1 sample per 4 msec and calculated 2nd derivate aroun 5
         %samplepoints. We use 500 samples/sec, 1sample/2msec. 
         frostms = 4; %divide by 2 to get samples according to 500 sample/sec
-        frostx = (t_spikepeak-(2*frostms/2)):(frostms/2):(t_spikepeak+(2*frostms/2));
+        frostx = (t_spikepeak-round(4*samplescale)):round(2*samplescale):(t_spikepeak+round(4*samplescale);
         frosty = signal(frostx);
-        frostsharpness = abs( (frosty(5)-(2*frosty(3))+frosty(1))/2 );
+        frostsharpness = abs( (frosty(5)-(2*frosty(3))+frosty(1))/4 );
 
         % Gaussian1 fit to afterdischarge. Coefficient bounds to increase
         % performance. Gauss area is computed on a gauss curve shiftet
@@ -258,6 +243,69 @@ for k = 1 : length(theFiles)
             % Root-mean-square of background activity preceding IED
             ongoingBG_RMS = rms(ongoingBG);
         end
+        
+        %BEMS
+        %BEMS Age
+    input_age = epiAnno.snippet.patientage;
+    
+    BEMS_age = 0;
+    if(input_age < 10)
+        BEMS_age = 16;
+    elseif(input_age < 20)
+        BEMS_age = 0;
+    elseif(input_age < 60)
+        BEMS_age = 12;
+    elseif(input_age >= 60)
+        BEMS_age = 25;
+    end
+    
+    %BEMS Descending amplitude
+    BEMS_descamp = 0;
+    if(descpeakamplitude < 70)
+        BEMS_descamp = 1;
+    elseif(descpeakamplitude >= 70 && deschampl(chan) < 90)
+        BEMS_descamp = 0;
+    elseif(descpeakamplitude >= 90 && deschampl(chan) < 120)
+        BEMS_descamp = 7;
+    elseif(descpeakamplitude >= 120)
+        BEMS_descamp = 17;
+    end
+    %BEMS onset slope
+    BEMS_onsslope = 0;
+    
+    if(onsetslope(chan) < 1) %samples, not ms.
+        BEMS_onsslope = 0;
+    elseif(onsetslope(chan) >= 1 && onsetslope(chan) < 1.5)
+        BEMS_onsslope = 4;
+    elseif(onsetslope(chan) >= 1.5 && onsetslope(chan) < 2)
+        BEMS_onsslope = 5;
+    elseif(onsetslope(chan) >= 2)
+        BEMS_onsslope = 11;
+    end
+    %BEMS spike to background power
+    BEMS_spiketobg = 0;
+    if(fftpowerratio*100 >= 8.6) %convert ratio to percent
+        BEMS_spiketobg = 0;
+    elseif(fftpowerratio*100 >= 4.7)
+        BEMS_spiketobg = 9;
+    elseif(fftpowerratio*100 >= 2.6)
+        BEMS_spiketobg = 6;
+    elseif(fftpowerratio*100 < 2.6)
+        BEMS_spiketobg = 14;
+    end
+    %BEMS slow after-wave area
+    BEMS_slow = 0;
+    if(exactareagfitsubtrapz/srate < 5)
+        BEMS_slow = 0;
+    elseif(exactareagfitsubtrapz/srate < 10)
+        BEMS_slow = 6;
+    elseif(exactareagfitsubtrapz/srate < 20)
+        BEMS_slow = 11;
+    elseif(exactareagfitsubtrapz/srate >= 20)
+        BEMS_slow = 19;
+    end   
+    %BEMS total
+    BEMS_score = BEMS_age + BEMS_descamp + BEMS_onsslope + BEMS_spiketobg + BEMS_slow;
 
         % Plot original signal, annotations, gauss model.
         if(doPlot == 1)

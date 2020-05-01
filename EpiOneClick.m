@@ -42,14 +42,16 @@ function EpiOneClick(filePath)
            
             EEG = eeg_checkset( EEG );
 
-            disp('Looking for EKG and photic...');
-            ekgindex = find(strcmp({EEG.chanlocs(:).labels}, 'P EKG')); %chanloc name changed for Kumar dataset
-            photicindex = find(strcmp({EEG.chanlocs(:).labels}, 'Photic'));                        
+            disp('Looking for EKG, EMG and photic...');
+            chanlocslowcase = cellfun(@lower, {EEG.chanlocs(:).labels},'UniformOutput',false);
+            ekgindex = find(contains(chanlocslowcase, 'ekg'));            
+            photicindex = find(contains(chanlocslowcase, 'photic'));  
+            emgindex = find(contains(chanlocslowcase, 'emg'));
             
             disp('Flipping data');
             EEG.data = -EEG.data;
             disp('Rereferencing data except EKG and photic');
-            EEG = pop_reref( EEG, [],'exclude',[ekgindex photicindex ]);  
+            EEG = pop_reref( EEG, [],'exclude',[ekgindex photicindex emgindex]);  
             %notch
             disp('Filtering data');
             EEG = pop_eegfilt(EEG, 48, 52, 3300, 1, 1, 0);
@@ -83,7 +85,7 @@ function EpiOneClick(filePath)
                 'ctrlselectcommand', {'disp(''ctrlmousedown'');', '', 'disp(''ctrlmouseup'');'} ...
                 );                                
                                     
-            clear ekgindex photicindex            
+            clear ekgindex photicindex emgindex            
             assignin('base','EEG',EEG);
             eeg_checkset( EEG );                          
             

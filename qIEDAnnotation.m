@@ -33,7 +33,7 @@
 function out = qIEDScorePipeline(electrode,sample)
     EEG = evalin('base','EEG');
     srate = EEG.srate;
-    samplescale = 1/500*srate;
+    samplescale = (1/500)*srate; %This variable replaces originally project specific hardcoded sample-related calculations.
     
     % Declare qIED parameters
     sharpness = [];
@@ -53,7 +53,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %endIED = round(tmprej(2))
 
 
-    % Find all peaks. Select most prominent and narrow as spike peak.
+    %% Find all peaks. Select most prominent and narrow as spike peak.
     % x- and y-values for signal around peak.
 
     %Handle edge case of click very close to the beginning or end
@@ -228,6 +228,8 @@ function out = qIEDScorePipeline(electrode,sample)
         IEDslowend = IEDspikeend; %slowminimalprominencesX(1); 
     end
     IEDslowendy = signal(IEDslowend); 
+    
+    %% Calculate qIED
     hasSlow = (minstartpos < length(signal) && (IEDslowend-IEDspikeend>3));
     if(hasSlow)           
         %adjust slow-wave signal length so it ends at prominent minimum.
@@ -247,7 +249,8 @@ function out = qIEDScorePipeline(electrode,sample)
         integralgfit = integrate(gfit, slowsignal(1, :).', 1);
         exactareagfit = integralgfit(length(integralgfit)) - integralgfit(1);
         exactareagfitsubtrapz = exactareagfit - trapz([1 sAfterDischargeLength], [(slowsignal(2, 1)+afterDischShift).', (slowsignal(2, sAfterDischargeLength)+afterDischShift)]);
-
+        slowwaveweber = exactareagfitsubtrapz/srate;
+        
         % Integration of afterdischarge using trapezoids. Area could be
         % overestemitated due to high-frequency activity. Smoothing? Filtering?
         integraltrapz = trapz((slowsignal(1, :)+afterDischShift).', (slowsignal(2, :)+afterDischShift)) ... 
@@ -256,6 +259,7 @@ function out = qIEDScorePipeline(electrode,sample)
         sADareaforplot = 0; integralgfit = 0; exactareagfit = 0; exactareagfitsubtrapz = 0; integraltrapz = 0;
         IEDslowend = IEDspikeend;
         IEDslowendy = IEDspikeendy;
+        slowwaveweber = 0;
     end %hasslow
     sduration(chan) = (IEDspikeend - IEDspikestart)*2*samplescale;
     %First halfwave (FH_)
@@ -264,10 +268,10 @@ function out = qIEDScorePipeline(electrode,sample)
     descpeakexactAmplitude = signal(IEDspikepeak) - signal(IEDspikeend);
     descpeakamplitude = round(descpeakexactAmplitude); deschampl(chan) = descpeakamplitude;
     FH_duration = IEDspikepeak - IEDspikestart;    
-    FH_exactslope = onsetpeakamplitude/FH_duration; onsetslope(chan) = FH_exactslope/2;
+    FH_exactslope = onsetpeakamplitude/FH_duration; onsetslope(chan) = FH_exactslope*srate/1000;
     FH_fullslope = round(FH_exactslope,1);   
     SH_duration = IEDspikeend - IEDspikepeak;
-    SH_exactfullslope = descpeakamplitude/SH_duration; descslope(chan) = SH_exactfullslope/2;
+    SH_exactfullslope = descpeakamplitude/SH_duration; descslope(chan) = SH_exactfullslope*srate/1000;
     SH_fullslope = round(SH_exactfullslope,1);
     % Asymmetry, ascending slope to descending slope ratio
     onset_desc_ratio = FH_fullslope/SH_fullslope;
@@ -313,12 +317,12 @@ function out = qIEDScorePipeline(electrode,sample)
         totalpower    = (trapz(hz(5:hzmaxidx), (2*abs(ongoingBGX(5:hzmaxidx))/length(ongoingBG)).^2)); %Total AUC/power for preceding background  
         fftcriterion2 = (trapz(hz(lowidx:highidx),(2*abs(ongoingBGX(lowidx:highidx))/length(ongoingBG)).^2)); %Power within band corresponding to IED
         fftpowerratio = fftcriterion2/totalpower;
-
+        spiketobackground = fftpowerratio*100;
         % Root-mean-square of background activity preceding IED
         ongoingBG_RMS = rms(ongoingBG);
     end   
     
-    %Calculate the Bergen Epileptiform Morphology Score
+    %% Calculate the Bergen Epileptiform Morphology Score
     %BEMS Age
     input_age = str2double(input('Enter age (integer): ', 's'));
     while isnan(input_age) || fix(input_age) ~= input_age
@@ -349,41 +353,41 @@ function out = qIEDScorePipeline(electrode,sample)
     %BEMS onset slope
     BEMS_onsslope = 0;
     
-    if(onsetslope(chan) < 0.5) %samples, not ms.
+    if(onsetslope(chan) < 1) 
         BEMS_onsslope = 0;
-    elseif(onsetslope(chan) >= 0.5 && onsetslope(chan) < 0.75)
+    elseif(onsetslope(chan) >= 1 && onsetslope(chan) < 1.5)
         BEMS_onsslope = 4;
-    elseif(onsetslope(chan) >= 0.75 && onsetslope(chan) < 1)
+    elseif(onsetslope(chan) >= 1.5 && onsetslope(chan) < 2)
         BEMS_onsslope = 5;
-    elseif(onsetslope(chan) >= 1)
+    elseif(onsetslope(chan) >= 2)
         BEMS_onsslope = 11;
     end
     %BEMS spike to background power
     BEMS_spiketobg = 0;
-    if(fftpowerratio*100 >= 8.6) %convert ratio to percent
+    if(spiketobackground >= 8.6)
         BEMS_spiketobg = 0;
-    elseif(fftpowerratio*100 >= 4.7)
+    elseif(spiketobackground >= 4.7)
         BEMS_spiketobg = 9;
-    elseif(fftpowerratio*100 >= 2.6)
+    elseif(spiketobackground >= 2.6)
         BEMS_spiketobg = 6;
-    elseif(fftpowerratio*100 < 2.6)
+    elseif(spiketobackground < 2.6)
         BEMS_spiketobg = 14;
     end
     %BEMS slow after-wave area
     BEMS_slow = 0;
-    if(exactareagfitsubtrapz/srate < 5)
+    if(slowwaveweber < 5)
         BEMS_slow = 0;
-    elseif(exactareagfitsubtrapz/srate < 10)
+    elseif(slowwaveweber < 10)
         BEMS_slow = 6;
-    elseif(exactareagfitsubtrapz/srate < 20)
+    elseif(slowwaveweber < 20)
         BEMS_slow = 11;
-    elseif(exactareagfitsubtrapz/srate >= 20)
+    elseif(slowwaveweber >= 20)
         BEMS_slow = 19;
     end   
     %BEMS total
     BEMS_score = BEMS_age + BEMS_descamp + BEMS_onsslope + BEMS_spiketobg + BEMS_slow;
 
-    %Plot the IED template
+    %% Plot the IED template
     Nxtime = length(signal);
     ymin = min(signal);
     ymax = max(signal);
@@ -412,8 +416,8 @@ function out = qIEDScorePipeline(electrode,sample)
     fig_so = scatter(IEDspikestart, IEDspikestarty,9, 'blue');
     fig_se = scatter(IEDspikeend, IEDspikeendy,9,'blue');
     str_x = sprintf('%0.2f',frostsharpness(chan));
-    str_y = sprintf('%0.2f', onsetslope(chan)*1000/srate); %convert to µV/msec  
-    str_z = sprintf('%0.2f', descslope(chan)*1000/srate); %convert to µV/msec 
+    str_y = sprintf('%0.2f', onsetslope(chan));
+    str_z = sprintf('%0.2f', descslope(chan)); 
     str_xx = sprintf('%0.2f', sduration(chan)); 
     str_yy = sprintf('%0.2f', onsetampl(chan));
     str_zz = sprintf('%0.2f', deschampl(chan));
@@ -437,8 +441,7 @@ function out = qIEDScorePipeline(electrode,sample)
     set(gca, 'xtick', [], 'ytick', []);
     out = {IEDspikestart+clicksample-siglengthBefore, IEDspikepeak+clicksample-siglengthBefore, IEDspikeend+clicksample-siglengthBefore, IEDslowend+clicksample-siglengthBefore};
 
-    %Save a separate file with the EEG data before and after click, and
-    %extracted measures
+    %% Save a separate file with the EEG data and qIED before and after clicked sample
     snippet.srate = EEG.srate;
     snippet.chanLocs = EEG.chanlocs;
     %snippet.clickedChannel = EEG.chanloc(
@@ -449,12 +452,16 @@ function out = qIEDScorePipeline(electrode,sample)
     snippet.spikeStartY = IEDspikestarty;
     snippet.spikePeakX = IEDspikepeak;
     snippet.spikePeakY = IEDspikepeaky;
-    snippet.spikeStartX = IEDspikeend;
-    snippet.spikeStartY = IEDspikeendy;    
+    snippet.spikeEndX = IEDspikeend;
+    snippet.spikeEndY = IEDspikeendy;    
     snippet.Amplitude_onset = onsetpeakamplitude;
     snippet.Amplitude_desc = descpeakamplitude;
     snippet.FrostSharpness = frostsharpness(chan);
     snippet.Slope_Onset =  onsetslope(chan);
+    snippet.Slope_Desc = descslope(chan);
+    snippet.SpikeToBackground = spiketobackground;
+    snippet.PrecedingRMS = ongoingBG_RMS;
+    snippet.SlowWaveWeber = slowwaveweber;
     snippet.hasSlow = hasSlow;
     snippet.slowEndX = IEDslowend;
     snippet.sduration = sduration(chan);
