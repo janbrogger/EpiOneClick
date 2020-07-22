@@ -321,73 +321,39 @@ function out = qIEDScorePipeline(electrode,sample)
         % Root-mean-square of background activity preceding IED
         ongoingBG_RMS = rms(ongoingBG);
     end   
-    
-    %% Calculate the Bergen Epileptiform Morphology Score
-    %BEMS Age
-    input_age = str2double(input('Enter age (integer): ', 's'));
-    while isnan(input_age) || fix(input_age) ~= input_age
-      input_age = str2double(input('Please enter an INTEGER: ', 's'));
-    end
-    BEMS_age = 0;
-    if(input_age < 10)
-        BEMS_age = 16;
-    elseif(input_age < 20)
-        BEMS_age = 0;
-    elseif(input_age < 60)
-        BEMS_age = 12;
-    elseif(input_age >= 60)
-        BEMS_age = 25;
-    end
-    
-    %BEMS Descending amplitude
-    BEMS_descamp = 0;
-    if(deschampl(chan) < 70)
-        BEMS_descamp = 1;
-    elseif(deschampl(chan) >= 70 && deschampl(chan) < 90)
-        BEMS_descamp = 0;
-    elseif(deschampl(chan) >= 90 && deschampl(chan) < 120)
-        BEMS_descamp = 7;
-    elseif(deschampl(chan) >= 120)
-        BEMS_descamp = 17;
-    end
-    %BEMS onset slope
-    BEMS_onsslope = 0;
-    
-    if(onsetslope(chan) < 1) 
-        BEMS_onsslope = 0;
-    elseif(onsetslope(chan) >= 1 && onsetslope(chan) < 1.5)
-        BEMS_onsslope = 4;
-    elseif(onsetslope(chan) >= 1.5 && onsetslope(chan) < 2)
-        BEMS_onsslope = 5;
-    elseif(onsetslope(chan) >= 2)
-        BEMS_onsslope = 11;
-    end
-    %BEMS spike to background power
-    BEMS_spiketobg = 0;
-    if(spiketobackground >= 8.6)
-        BEMS_spiketobg = 0;
-    elseif(spiketobackground >= 4.7)
-        BEMS_spiketobg = 9;
-    elseif(spiketobackground >= 2.6)
-        BEMS_spiketobg = 6;
-    elseif(spiketobackground < 2.6)
-        BEMS_spiketobg = 14;
-    end
-    %BEMS slow after-wave area
-    BEMS_slow = 0;
-    if(slowwaveweber < 5)
-        BEMS_slow = 0;
-    elseif(slowwaveweber < 10)
-        BEMS_slow = 6;
-    elseif(slowwaveweber < 20)
-        BEMS_slow = 11;
-    elseif(slowwaveweber >= 20)
-        BEMS_slow = 19;
-    end   
-    %BEMS total
-    BEMS_score = BEMS_age + BEMS_descamp + BEMS_onsslope + BEMS_spiketobg + BEMS_slow;
 
-    %% Plot the IED template
+    %% Result strings
+    str_x = sprintf('%0.2f',frostsharpness(chan));
+    str_y = sprintf('%0.2f', onsetslope(chan));
+    str_z = sprintf('%0.2f', descslope(chan)); 
+    str_xx = sprintf('%0.2f', sduration(chan)); 
+    str_yy = sprintf('%0.2f', onsetampl(chan));
+    str_zz = sprintf('%0.2f', deschampl(chan));    
+    resultsharp = strcat(['Sharpness: ',str_x,]); 
+    resultonslope = strcat(['Onsetslope: ',str_y]);
+    resultdeslope = strcat(['Descslope: ',str_z]);
+    resultdur = strcat(['Duration: ',str_xx]); 
+    resultonsamp = strcat(['Onsetampl: ', str_yy]);
+    resultdescamp = strcat(['Descampl: ', str_zz]);
+    resultslow = '';
+    if(hasSlow)
+        str_ss = sprintf('%0.2f', exactareagfitsubtrapz/srate);
+        resultslow = strcat(['Slowwave: ', str_ss]);
+    end
+    resultagestr = '';
+    resultnumchanstr = '';
+    resultfocusidstr = '';
+    input_age = 0;
+    input_focusid = 0;
+    input_numchan = 0;
+    BEMS_age = 0;
+    BEMS_descamp = 0;
+    BEMS_onsslope = 0;
+    BEMS_spiketobg = 0;
+    BEMS_slow = 0;
+    BEMS_score = 0;
+    
+    %% Plot the IED template and results
     Nxtime = length(signal);
     ymin = min(signal);
     ymax = max(signal);
@@ -398,8 +364,42 @@ function out = qIEDScorePipeline(electrode,sample)
     end
     xaspectr = (Nxtime*2/1000)*3;
     yaspectr = (ymax - ymin)/100;
-    f = figure('Name', 'Is this the IED you are looking for?');
-    subplot(2,1,1)
+    fheight=600;
+    f = figure('Name', 'Is this the IED you are looking for?','Position',[360,500,450,fheight]);    
+    resultinfo1 = uicontrol('Style','text', 'String',resultsharp,'Position',[50,fheight-250,400,20]);
+    resultinfo2 = uicontrol('Style','text', 'String',resultonslope,'Position',[50,fheight-275,400,20]);
+    resultinfo3 = uicontrol('Style','text', 'String',resultdeslope,'Position',[50,fheight-300,400,20]);
+    resultinfo4 = uicontrol('Style','text', 'String',resultdur,'Position',[50,fheight-325,400,20]);
+    resultinfo5 = uicontrol('Style','text', 'String',resultonsamp,'Position',[50,fheight-350,400,20]);
+    resultinfo6 = uicontrol('Style','text', 'String',resultdescamp,'Position',[50,fheight-375,400,20]);
+    resultinfo7 = uicontrol('Style','text', 'String',resultslow,'Position',[50,fheight-400,400,20]);    
+    resultinfo8a = uicontrol('Style','text', 'String','Enter age (integer):','Position',[50,fheight-425,200,20]);
+    resultinputage = uicontrol('Style','edit', 'String',resultagestr,'Position',[50,fheight-450,200,20],'Callback',@agebutton_Callback);
+    resultinfo9a = uicontrol('Style','text', 'String','Enter number of channels (integer):','Position',[50,fheight-475,240,20]);
+    resultinputnumchan = uicontrol('Style','edit', 'String',resultnumchanstr,'Position',[50,fheight-500,240,20],'Callback',@numchanbutton_Callback);
+    resultinfo10a = uicontrol('Style','text', 'String','Enter focus ID (integer):','Position',[50,fheight-525,240,20]);
+    resultinputfocusid = uicontrol('Style','edit', 'String',resultfocusidstr,'Position',[50,fheight-550,240,20],'Callback',@focusidbutton_Callback);
+    resultinfoBEMS = uicontrol('Style','text', 'String','BEMS: ','Position',[50,fheight-575,400,20]);
+    savebutton = uicontrol('Style','pushbutton', 'String','Save and close','Position',[50,fheight-600,200,20],'Callback',@savebutton_Callback);
+    ha = axes('Units','pixels','Position',[5,fheight-220,440,200]);
+    align([savebutton,resultinfo1,resultinfo2,resultinfo3,resultinfo4,resultinfo5,resultinfo6,resultinfo7,resultinfo8a,resultinputage,resultinfo9a,resultinputnumchan, resultinfo10a, resultinputfocusid, resultinfoBEMS],'Center','None');
+    f.Units = 'normalized';
+    ha.Units = 'normalized';
+    savebutton.Units = 'normalized';
+    resultinfo1.Units = 'normalized';
+    resultinfo2.Units = 'normalized';
+    resultinfo3.Units = 'normalized';
+    resultinfo4.Units = 'normalized';
+    resultinfo5.Units = 'normalized';
+    resultinfo6.Units = 'normalized';
+    resultinfo7.Units = 'normalized';
+    resultinfo8a.Units = 'normalized';
+    resultinputage.Units = 'normalized';
+    resultinfo9a.Units = 'normalized';
+    resultinputnumchan.Units = 'normalized';
+    resultinfo10a.Units = 'normalized';
+    resultinputfocusid.Units = 'normalized';
+    resultinfoBEMS.Units = 'normalized';
     fig_signal = plot(x,signal);
     title(num2str(chan));
     hold on;
@@ -415,68 +415,161 @@ function out = qIEDScorePipeline(electrode,sample)
     end
     fig_so = scatter(IEDspikestart, IEDspikestarty,9, 'blue');
     fig_se = scatter(IEDspikeend, IEDspikeendy,9,'blue');
-    str_x = sprintf('%0.2f',frostsharpness(chan));
-    str_y = sprintf('%0.2f', onsetslope(chan));
-    str_z = sprintf('%0.2f', descslope(chan)); 
-    str_xx = sprintf('%0.2f', sduration(chan)); 
-    str_yy = sprintf('%0.2f', onsetampl(chan));
-    str_zz = sprintf('%0.2f', deschampl(chan));
-    str_bems = sprintf('%0.0f', BEMS_score);
     legend([fig_signal fig_IED fig_slow_aprox fig_sp fig_so],'EEG signal', 'IED signal', 'Slow-wave approximation', 'Spike peak', 'Spike onset, spike end and slow-wave end', 'Location', 'southoutside')
-    pbaspect([xaspectr yaspectr 1]);
-
-    subplot(2,1,2)
-    resultline1 = strcat(['Sharpness: ', str_x,', Onsetslope: ', str_y, ', Descslope: ', str_z]);
-    resultline2 = strcat(['Duration: ', str_xx,', Onsetampl: ', str_yy, ', Descampl: ', str_zz]);
-    text(0.1, 0.8, resultline1);
-    hold on;
-    text(0.1, 0.6, resultline2);
-    if(hasSlow)
-        str_ss = sprintf('%0.2f', exactareagfitsubtrapz/srate);
-        resultline3 = strcat(['Slowwave: ', str_ss]);
-        text(0.1, 0.4, resultline3);
-    end
-    resultline4 = strcat(['BEMS: ', str_bems]);
-    text(0.1, 0.2, resultline4);
+    pbaspect([xaspectr yaspectr 1]);        
     set(gca, 'xtick', [], 'ytick', []);
     out = {IEDspikestart+clicksample-siglengthBefore, IEDspikepeak+clicksample-siglengthBefore, IEDspikeend+clicksample-siglengthBefore, IEDslowend+clicksample-siglengthBefore};
 
-    %% Save a separate file with the EEG data and qIED before and after clicked sample
-    snippet.srate = EEG.srate;
-    snippet.chanLocs = EEG.chanlocs;
-    %snippet.clickedChannel = EEG.chanloc(
-    snippet.clickedSample = sample;
-    snippet.clickedChannelIndex = chan;
-    snippet.signal = signal;
-    snippet.spikeStartX = IEDspikestart;
-    snippet.spikeStartY = IEDspikestarty;
-    snippet.spikePeakX = IEDspikepeak;
-    snippet.spikePeakY = IEDspikepeaky;
-    snippet.spikeEndX = IEDspikeend;
-    snippet.spikeEndY = IEDspikeendy;    
-    snippet.Amplitude_onset = onsetpeakamplitude;
-    snippet.Amplitude_desc = descpeakamplitude;
-    snippet.FrostSharpness = frostsharpness(chan);
-    snippet.Slope_Onset =  onsetslope(chan);
-    snippet.Slope_Desc = descslope(chan);
-    snippet.SpikeToBackground = spiketobackground;
-    snippet.PrecedingRMS = ongoingBG_RMS;
-    snippet.SlowWaveWeber = slowwaveweber;
-    snippet.hasSlow = hasSlow;
-    snippet.slowEndX = IEDslowend;
-    snippet.sduration = sduration(chan);
-    snippet.BEMS_age = BEMS_age;
-    snippet.BEMS_descamp = BEMS_descamp;
-    snippet.BEMS_onsslope = BEMS_onsslope;
-    snippet.BEMS_spiketobg = BEMS_spiketobg;
-    snippet.BEMS_slow = BEMS_slow;
-    snippet.BEMS = BEMS_score;  
-    snippet.patientage = input_age;
 
-    [filepath,name,ext] = fileparts(EEG.setname);    
-    fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
-    snippet.BEMS_filename = fileName;
-    filePath = fullfile(pwd, fileName);            
-    save(filePath, 'snippet');
+%% Supporting functions. (Save,..)
+    
+    function savebutton_Callback(source,eventdata) 
+    % Save snippet and data to mat-file and close window.          
+        snippet.srate = EEG.srate;
+        snippet.chanLocs = EEG.chanlocs;
+        %snippet.clickedChannel = EEG.chanloc(
+        snippet.clickedSample = sample;
+        snippet.clickedChannelIndex = chan;
+        snippet.signal = signal;
+        snippet.spikeStartX = IEDspikestart;
+        snippet.spikeStartY = IEDspikestarty;
+        snippet.spikePeakX = IEDspikepeak;
+        snippet.spikePeakY = IEDspikepeaky;
+        snippet.spikeEndX = IEDspikeend;
+        snippet.spikeEndY = IEDspikeendy;    
+        snippet.Amplitude_onset = onsetpeakamplitude;
+        snippet.Amplitude_desc = descpeakamplitude;
+        snippet.FrostSharpness = frostsharpness(chan);
+        snippet.Slope_Onset =  onsetslope(chan);
+        snippet.Slope_Desc = descslope(chan);
+        snippet.SpikeToBackground = spiketobackground;
+        snippet.PrecedingRMS = ongoingBG_RMS;
+        snippet.SlowWaveWeber = slowwaveweber;
+        snippet.hasSlow = hasSlow;
+        snippet.slowEndX = IEDslowend;
+        snippet.sduration = sduration(chan);
+        snippet.BEMS_age = BEMS_age;
+        snippet.BEMS_descamp = BEMS_descamp;
+        snippet.BEMS_onsslope = BEMS_onsslope;
+        snippet.BEMS_spiketobg = BEMS_spiketobg;
+        snippet.BEMS_slow = BEMS_slow;        
+        snippet.patientage = input_age;
+        
+        %Only proceed to save when data have been entered correctly
+        numchanvisual  = str2double(resultinputnumchan.String);
+        if(isnan(numchanvisual))
+            resultnumchanstr.String = "Invalid";
+            resultinfoBEMS.String = "BEMS: Invalid";
+            return;
+        end        
+        snippet.numchanvisual = numchanvisual;
+        
+        focusIDvisual = str2double(resultinputfocusid.String);
+        if(isnan(focusIDvisual))
+            resultfocusidstr.String = "Invalid";
+            return;
+        end
+        snippet.focusIDvisual = focusIDvisual;
+        
+        if(isnan(BEMS_score))
+            resultinfoBEMS.String = "Invalid";
+            return;
+        end
+        snippet.BEMS = BEMS_score;  
 
+        [filepath,name,ext] = fileparts(EEG.setname);    
+        fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
+        snippet.BEMS_filename = fileName;
+        filePath = fullfile(pwd, fileName);            
+        save(filePath, 'snippet');
+        close(f)
+    end
+    
+    function agebutton_Callback(source,eventdata) 
+        % Once age is entered BEMS can be calculated.
+        %BEMS Age
+        resultagestr = resultinputage.String;        
+        input_age = str2double(resultagestr);
+        if isnan(input_age) || fix(input_age) ~= input_age
+          resultinputage.String = "Invalid";
+          return;
+        end
+        BEMS_age = 0;
+        if(input_age < 10)
+            BEMS_age = 16;
+        elseif(input_age < 20)
+            BEMS_age = 0;
+        elseif(input_age < 60)
+            BEMS_age = 12;
+        elseif(input_age >= 60)
+            BEMS_age = 25;
+        end
+
+        %BEMS Descending amplitude
+        BEMS_descamp = 0;
+        if(deschampl(chan) < 70)
+            BEMS_descamp = 1;
+        elseif(deschampl(chan) >= 70 && deschampl(chan) < 90)
+            BEMS_descamp = 0;
+        elseif(deschampl(chan) >= 90 && deschampl(chan) < 120)
+            BEMS_descamp = 7;
+        elseif(deschampl(chan) >= 120)
+            BEMS_descamp = 17;
+        end
+        %BEMS onset slope
+        BEMS_onsslope = 0;
+
+        if(onsetslope(chan) < 1) 
+            BEMS_onsslope = 0;
+        elseif(onsetslope(chan) >= 1 && onsetslope(chan) < 1.5)
+            BEMS_onsslope = 4;
+        elseif(onsetslope(chan) >= 1.5 && onsetslope(chan) < 2)
+            BEMS_onsslope = 5;
+        elseif(onsetslope(chan) >= 2)
+            BEMS_onsslope = 11;
+        end
+        %BEMS spike to background power
+        BEMS_spiketobg = 0;
+        if(spiketobackground >= 8.6)
+            BEMS_spiketobg = 0;
+        elseif(spiketobackground >= 4.7)
+            BEMS_spiketobg = 9;
+        elseif(spiketobackground >= 2.6)
+            BEMS_spiketobg = 6;
+        elseif(spiketobackground < 2.6)
+            BEMS_spiketobg = 14;
+        end
+        %BEMS slow after-wave area
+        BEMS_slow = 0;
+        if(slowwaveweber < 5)
+            BEMS_slow = 0;
+        elseif(slowwaveweber < 10)
+            BEMS_slow = 6;
+        elseif(slowwaveweber < 20)
+            BEMS_slow = 11;
+        elseif(slowwaveweber >= 20)
+            BEMS_slow = 19;
+        end   
+        %BEMS total
+        BEMS_score = BEMS_age + BEMS_descamp + BEMS_onsslope + BEMS_spiketobg + BEMS_slow;
+        str_bems = sprintf('%0.0f', BEMS_score);
+        resultinfoBEMS.String = strcat(['BEMS: ', str_bems]);
+    end
+
+    function numchanbutton_Callback(source,eventdata)     
+        input_numchan = str2double(resultinputnumchan.String);
+        if isnan(input_numchan) || fix(input_numchan) ~= input_numchan
+          resultinputnumchan.String = "Invalid";
+          resultinfoBEMS.String = "BEMS: Invalid";
+          return;
+        end
+    end
+
+    function focusidbutton_Callback(source,eventdata)    
+        input_focusid = str2double(resultinputfocusid.String);
+        if isnan(input_focusid) || fix(input_focusid) ~= input_focusid
+          resultinputfocusid.String = "Invalid";
+          return;
+        end
+    end
 end 
