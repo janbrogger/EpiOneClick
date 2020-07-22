@@ -326,7 +326,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %BEMS Age
     input_age = str2double(input('Enter age (integer): ', 's'));
     while isnan(input_age) || fix(input_age) ~= input_age
-      input_age = str2double(input('Please enter and INTEGER: ', 's'));
+      input_age = str2double(input('Please enter an INTEGER: ', 's'));
     end
     BEMS_age = 0;
     if(input_age < 10)
