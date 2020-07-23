@@ -448,18 +448,24 @@ function out = qIEDScorePipeline(electrode,sample)
         snippet.hasSlow = hasSlow;
         snippet.slowEndX = IEDslowend;
         snippet.sduration = sduration(chan);
-        snippet.BEMS_age = BEMS_age;
-        snippet.BEMS_descamp = BEMS_descamp;
-        snippet.BEMS_onsslope = BEMS_onsslope;
-        snippet.BEMS_spiketobg = BEMS_spiketobg;
-        snippet.BEMS_slow = BEMS_slow;        
-        snippet.patientage = input_age;
+                      
+        resultagestr = resultinputage.String;        
+        input_age = str2double(resultagestr);
+        if isnan(input_age) || fix(input_age) ~= input_age
+          resultinputage.String = "Invalid";
+        else
+            snippet.patientage = input_age;
+            snippet.BEMS_age = BEMS_age;
+            snippet.BEMS_descamp = BEMS_descamp;
+            snippet.BEMS_onsslope = BEMS_onsslope;
+            snippet.BEMS_spiketobg = BEMS_spiketobg;
+            snippet.BEMS_slow = BEMS_slow;  
+        end        
         
         %Only proceed to save when data have been entered correctly
         numchanvisual  = str2double(resultinputnumchan.String);
         if(isnan(numchanvisual))
             resultnumchanstr.String = "Invalid";
-            resultinfoBEMS.String = "BEMS: Invalid";
             return;
         end        
         snippet.numchanvisual = numchanvisual;
@@ -471,11 +477,11 @@ function out = qIEDScorePipeline(electrode,sample)
         end
         snippet.focusIDvisual = focusIDvisual;
         
-        if(isnan(BEMS_score))
-            resultinfoBEMS.String = "Invalid";
-            return;
-        end
-        snippet.BEMS = BEMS_score;  
+%         if(isnan(BEMS_score))
+%             resultinfoBEMS.String = "Invalid";
+%             return;
+%         end
+%         snippet.BEMS = BEMS_score;  
 
         [filepath,name,ext] = fileparts(EEG.setname);    
         fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
