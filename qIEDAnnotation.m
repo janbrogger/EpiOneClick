@@ -343,8 +343,10 @@ function out = qIEDScorePipeline(electrode,sample)
     resultagestr = '';
     resultnumchanstr = '';
     resultfocusidstr = '';
+    resultregionsstr = '';
     input_age = 0;
     input_focusid = 0;
+    input_regionstr = "";
     input_numchan = 0;
     BEMS_age = 0;
     BEMS_descamp = 0;
@@ -364,8 +366,8 @@ function out = qIEDScorePipeline(electrode,sample)
     end
     xaspectr = (Nxtime*2/1000)*3;
     yaspectr = (ymax - ymin)/100;
-    fheight=600;
-    f = figure('Name', 'Is this the IED you are looking for?','Position',[360,500,450,fheight]);    
+    fheight=700;
+    f = figure('Name', 'Is this the IED you are looking for?','Position',[360,300,450,fheight]);    
     resultinfo1 = uicontrol('Style','text', 'String',resultsharp,'Position',[50,fheight-250,400,20]);
     resultinfo2 = uicontrol('Style','text', 'String',resultonslope,'Position',[50,fheight-275,400,20]);
     resultinfo3 = uicontrol('Style','text', 'String',resultdeslope,'Position',[50,fheight-300,400,20]);
@@ -379,10 +381,12 @@ function out = qIEDScorePipeline(electrode,sample)
     resultinputnumchan = uicontrol('Style','edit', 'String',resultnumchanstr,'Position',[50,fheight-500,240,20],'Callback',@numchanbutton_Callback);
     resultinfo10a = uicontrol('Style','text', 'String','Enter focus ID (integer):','Position',[50,fheight-525,240,20]);
     resultinputfocusid = uicontrol('Style','edit', 'String',resultfocusidstr,'Position',[50,fheight-550,240,20],'Callback',@focusidbutton_Callback);
-    resultinfoBEMS = uicontrol('Style','text', 'String','BEMS: ','Position',[50,fheight-575,400,20]);
-    savebutton = uicontrol('Style','pushbutton', 'String','Save and close','Position',[50,fheight-600,200,20],'Callback',@savebutton_Callback);
+    resultinfo11 = uicontrol('Style','text', 'String','Enter regions (e.g. FTP left):','Position',[50,fheight-575,240,20]);
+    resultinputregions = uicontrol('Style','edit', 'String',resultregionsstr,'Position',[50,fheight-600,240,20],'Callback',@regionsbutton_Callback);
+    resultinfoBEMS = uicontrol('Style','text', 'String','BEMS: ','Position',[50,fheight-625,400,20]);
+    savebutton = uicontrol('Style','pushbutton', 'String','Save and close','Position',[50,fheight-650,200,20],'Callback',@savebutton_Callback);
     ha = axes('Units','pixels','Position',[5,fheight-220,440,200]);
-    align([savebutton,resultinfo1,resultinfo2,resultinfo3,resultinfo4,resultinfo5,resultinfo6,resultinfo7,resultinfo8a,resultinputage,resultinfo9a,resultinputnumchan, resultinfo10a, resultinputfocusid, resultinfoBEMS],'Center','None');
+    align([savebutton,resultinfo1,resultinfo2,resultinfo3,resultinfo4,resultinfo5,resultinfo6,resultinfo7,resultinfo8a,resultinputage,resultinfo9a,resultinputnumchan, resultinfo10a, resultinputfocusid, resultinfo11, resultinputregions, resultinfoBEMS],'Center','None');
     f.Units = 'normalized';
     ha.Units = 'normalized';
     savebutton.Units = 'normalized';
@@ -398,6 +402,8 @@ function out = qIEDScorePipeline(electrode,sample)
     resultinfo9a.Units = 'normalized';
     resultinputnumchan.Units = 'normalized';
     resultinfo10a.Units = 'normalized';
+    resultinfo11.Units = 'normalized';
+    resultinputregions.Units = 'normalized';
     resultinputfocusid.Units = 'normalized';
     resultinfoBEMS.Units = 'normalized';
     fig_signal = plot(x,signal);
@@ -477,6 +483,12 @@ function out = qIEDScorePipeline(electrode,sample)
         end
         snippet.focusIDvisual = focusIDvisual;
         
+        regionvisual = resultinputregions.String;
+        if(resultinputregions.String == "Invalid")
+            return;
+        end
+        snippet.regionvisual = regionvisual;
+        
 %         if(isnan(BEMS_score))
 %             resultinfoBEMS.String = "Invalid";
 %             return;
@@ -491,7 +503,7 @@ function out = qIEDScorePipeline(electrode,sample)
         close(f)
     end
     
-    function agebutton_Callback(source,eventdata) 
+    function agebutton_Callback() 
         % Once age is entered BEMS can be calculated.
         %BEMS Age
         resultagestr = resultinputage.String;        
@@ -562,7 +574,7 @@ function out = qIEDScorePipeline(electrode,sample)
         resultinfoBEMS.String = strcat(['BEMS: ', str_bems]);
     end
 
-    function numchanbutton_Callback(source,eventdata)     
+    function numchanbutton_Callback(src,~)     
         input_numchan = str2double(resultinputnumchan.String);
         if isnan(input_numchan) || fix(input_numchan) ~= input_numchan
           resultinputnumchan.String = "Invalid";
@@ -571,10 +583,19 @@ function out = qIEDScorePipeline(electrode,sample)
         end
     end
 
-    function focusidbutton_Callback(source,eventdata)    
+    function focusidbutton_Callback(src,~)    
         input_focusid = str2double(resultinputfocusid.String);
         if isnan(input_focusid) || fix(input_focusid) ~= input_focusid
           resultinputfocusid.String = "Invalid";
+          return;
+        end
+    end
+
+    function regionsbutton_Callback(src,~)    
+        input_regionstr = resultinputregions.String;
+        if ~(contains(input_regionstr, 'F') || contains(input_regionstr, 'C') || contains(input_regionstr, 'T') || contains(input_regionstr, 'P') || contains(input_regionstr, 'O')) ...
+                || ~(contains(input_regionstr, 'left') || contains(input_regionstr, 'right') || contains(input_regionstr, 'mid'))
+          resultinputregions.String = "Invalid";
           return;
         end
     end
