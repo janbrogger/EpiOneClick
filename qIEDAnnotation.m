@@ -488,7 +488,7 @@ function out = qIEDScorePipeline(electrode,sample)
             return;
         end
         snippet.regionvisual = regionvisual;
-        
+        snippet.EEGfilepath = EEG.setname;
 %         if(isnan(BEMS_score))
 %             resultinfoBEMS.String = "Invalid";
 %             return;
