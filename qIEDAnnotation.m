@@ -76,7 +76,7 @@ function out = qIEDScorePipeline(electrode,sample)
         error('This is an edge case at the beginning or end of EEG. It does not work. Skip it for now.');
     end
     signal = eegdata(chan,(clicksample-siglengthBefore):(clicksample+siglengthAfter));
-
+    EEGdata = eegdata(:,(clicksample-siglengthBefore):(clicksample+siglengthAfter));
     x = 1:1:length(signal);
     t_spikepeak = ceil(length(signal)/2);
     searchdistance = round(25*samplescale);
@@ -437,6 +437,7 @@ function out = qIEDScorePipeline(electrode,sample)
         snippet.clickedSample = sample;
         snippet.clickedChannelIndex = chan;
         snippet.signal = signal;
+        snippet.EEGdata = EEGdata;
         snippet.spikeStartX = IEDspikestart;
         snippet.spikeStartY = IEDspikestarty;
         snippet.spikePeakX = IEDspikepeak;
