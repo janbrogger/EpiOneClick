@@ -490,14 +490,12 @@ function out = qIEDScorePipeline(electrode,sample)
         end
         snippet.regionvisual = regionvisual;
         snippet.EEGfilepath = EEG.setname;
-%         if(isnan(BEMS_score))
-%             resultinfoBEMS.String = "Invalid";
-%             return;
-%         end
-%         snippet.BEMS = BEMS_score;  
-
-        [filepath,name,ext] = fileparts(EEG.setname);    
-        fileName = ['snippet_' name '_' num2str(IEDspikestart) ];
+        
+        %Use clickedsample/srate as postfix (store one unique IED-candidate per
+        %second.
+        [filepath,name,ext] = fileparts(EEG.setname);  
+        snippetpostfix = num2str(round(clicksample/srate));
+        fileName = ['snippet_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
         filePath = fullfile(pwd, fileName);            
         save(filePath, 'snippet');
