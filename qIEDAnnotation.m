@@ -483,11 +483,14 @@ function out = qIEDScorePipeline(electrode,sample)
             return;
         end
         snippet.focusIDvisual = focusIDvisual;
-        
-        regionvisual = resultinputregions.String;
-        if(resultinputregions.String == "Invalid")
-            return;
-        end
+      
+         regionvisual = resultinputregions.String;
+         
+%         Skipping this check for now. We only use this value to make
+%         the marking process easier.
+%         if(resultinputregions.String == "Invalid")
+%             return;
+%         end
         snippet.regionvisual = regionvisual;
         snippet.EEGfilepath = EEG.setname;
         
@@ -497,7 +500,7 @@ function out = qIEDScorePipeline(electrode,sample)
         snippetpostfix = num2str(round(clicksample/srate));
         fileName = ['snippet_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
-        filePath = fullfile(pwd, fileName);            
+        filePath = fullfile(pwd, 'output', fileName);            
         save(filePath, 'snippet');
         close(f)
     end
@@ -591,11 +594,12 @@ function out = qIEDScorePipeline(electrode,sample)
     end
 
     function regionsbutton_Callback(src,~)    
-        input_regionstr = resultinputregions.String;
-        if ~(contains(input_regionstr, 'F') || contains(input_regionstr, 'C') || contains(input_regionstr, 'T') || contains(input_regionstr, 'P') || contains(input_regionstr, 'O')) ...
-                || ~(contains(input_regionstr, 'left') || contains(input_regionstr, 'right') || contains(input_regionstr, 'mid'))
-          resultinputregions.String = "Invalid";
-          return;
-        end
+%       Skipping this check for now.
+%         input_regionstr = resultinputregions.String;
+%         if ~(contains(input_regionstr, 'F') || contains(input_regionstr, 'C') || contains(input_regionstr, 'T') || contains(input_regionstr, 'P') || contains(input_regionstr, 'O')) ...
+%                 || ~(contains(input_regionstr, 'left') || contains(input_regionstr, 'right') || contains(input_regionstr, 'mid'))
+%           resultinputregions.String = "Invalid";
+%           return;
+%         end
     end
 end 
