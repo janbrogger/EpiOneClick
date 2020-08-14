@@ -1,5 +1,7 @@
 function varargout = SnippetMeasures(userid, doPlot, doPlotfit, doTitle, saveMeasures)
-% IMPORTANT:    Assert correct variable rootfolder
+
+
+% IMPORTANT:    Assert correct variable "rootfolder". 
 %
 % varargin:
 % doPlot        - 1: Produce figures/plots. 0: No figures, only measures.
@@ -8,15 +10,12 @@ function varargout = SnippetMeasures(userid, doPlot, doPlotfit, doTitle, saveMea
 % doTitle       - 1: Plot titles with measures 0: No titles 
 % saveMeasures  - 1: Save mesaures to excel 0: Don't save
 % varargout:
-%           - Quantitative measures per User.
+%           - Quantitative measures.
 %
 % Dependencies  
-% -ScorePipeline snippets at location
-% epileptiform\1b-Matlab\data\User_?\snippets\
-%
-% -Folders to output figures:
-% epileptiform\1b-Matlab\data\User_?\SnippetSignals and 
-% epileptiform\1b-Matlab\data\User_?\FFTplots\
+% -Snippets at location epileptiform\1b-Matlab\data\User_?\snippets\
+
+
 userstr = num2str(userid);
 
 % Declare root folder containing EEG-snippets and check that it exists.
