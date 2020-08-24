@@ -31,9 +31,16 @@
 % Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 function out = qIEDScorePipeline(electrode,sample)
+    settings = EpiOneClickSettings();
     EEG = evalin('base','EEG');
     srate = EEG.srate;
     samplescale = (1/500)*srate; %This variable replaces originally project specific hardcoded sample-related calculations.
+    
+    %Output folder
+    outputfolder = pwd;
+    if(isfield(settings, 'SaveFolder'))
+        outputfolder = settings.SaveFolder;
+    end
     
     % Declare qIED parameters
     sharpness = [];
@@ -249,7 +256,7 @@ function out = qIEDScorePipeline(electrode,sample)
         integralgfit = integrate(gfit, slowsignal(1, :).', 1);
         exactareagfit = integralgfit(length(integralgfit)) - integralgfit(1);
         exactareagfitsubtrapz = exactareagfit - trapz([1 sAfterDischargeLength], [(slowsignal(2, 1)+afterDischShift).', (slowsignal(2, sAfterDischargeLength)+afterDischShift)]);
-        slowwaveweber = exactareagfitsubtrapz/srate;
+        slowwaveweber = exactareagfitsubtrapz/srate; %Convert area from µV*samples to µV*seconds
         
         % Integration of afterdischarge using trapezoids. Area could be
         % overestemitated due to high-frequency activity. Smoothing? Filtering?
@@ -261,7 +268,7 @@ function out = qIEDScorePipeline(electrode,sample)
         IEDslowendy = IEDspikeendy;
         slowwaveweber = 0;
     end %hasslow
-    sduration(chan) = (IEDspikeend - IEDspikestart)*2*samplescale;
+    sduration(chan) = (IEDspikeend - IEDspikestart);
     %First halfwave (FH_)
     onsetpeakexactAmplitude = signal(IEDspikepeak) - signal(IEDspikestart);
     onsetpeakamplitude = round(onsetpeakexactAmplitude); onsetampl(chan) = onsetpeakamplitude;
@@ -303,8 +310,8 @@ function out = qIEDScorePipeline(electrode,sample)
 
         % Convert IED-duration to band in Hz. We use +- 10% of duration,
         % then divide sample rate by upper/lower duration bound.
-        spikedurshort = sduration(chan) / 2 * 0.9;
-        spikedurlong = sduration(chan) / 2 * 1.1;
+        spikedurshort = sduration(chan) * 0.9;
+        spikedurlong = sduration(chan) * 1.1;
         spikehzhigh = srate/spikedurshort;
         spikehzlow = srate/spikedurlong;
         %Locate the index in hz-vector. For integration and plotting.
@@ -321,12 +328,12 @@ function out = qIEDScorePipeline(electrode,sample)
         % Root-mean-square of background activity preceding IED
         ongoingBG_RMS = rms(ongoingBG);
     end   
-
+    sdurationMS = sduration(chan) *(1000/srate); %milliseconds.
     %% Result strings
     str_x = sprintf('%0.2f',frostsharpness(chan));
     str_y = sprintf('%0.2f', onsetslope(chan));
     str_z = sprintf('%0.2f', descslope(chan)); 
-    str_xx = sprintf('%0.2f', sduration(chan)); 
+    str_xx = sprintf('%0.2f', sdurationMS); 
     str_yy = sprintf('%0.2f', onsetampl(chan));
     str_zz = sprintf('%0.2f', deschampl(chan));    
     resultsharp = strcat(['Sharpness: ',str_x,]); 
@@ -368,25 +375,23 @@ function out = qIEDScorePipeline(electrode,sample)
     yaspectr = (ymax - ymin)/100;
     fheight=700;
     f = figure('Name', 'Is this the IED you are looking for?','Position',[360,300,450,fheight]);    
-    resultinfo1 = uicontrol('Style','text', 'String',resultsharp,'Position',[50,fheight-250,400,20]);
-    resultinfo2 = uicontrol('Style','text', 'String',resultonslope,'Position',[50,fheight-275,400,20]);
-    resultinfo3 = uicontrol('Style','text', 'String',resultdeslope,'Position',[50,fheight-300,400,20]);
-    resultinfo4 = uicontrol('Style','text', 'String',resultdur,'Position',[50,fheight-325,400,20]);
-    resultinfo5 = uicontrol('Style','text', 'String',resultonsamp,'Position',[50,fheight-350,400,20]);
-    resultinfo6 = uicontrol('Style','text', 'String',resultdescamp,'Position',[50,fheight-375,400,20]);
-    resultinfo7 = uicontrol('Style','text', 'String',resultslow,'Position',[50,fheight-400,400,20]);    
+    resultinfo1 = uicontrol('Style','text', 'String',resultsharp,'Position',[50,fheight-200,400,20]);
+    resultinfo2 = uicontrol('Style','text', 'String',resultonslope,'Position',[50,fheight-225,400,20]);
+    resultinfo3 = uicontrol('Style','text', 'String',resultdeslope,'Position',[50,fheight-250,400,20]);
+    resultinfo4 = uicontrol('Style','text', 'String',resultdur,'Position',[50,fheight-275,400,20]);
+    resultinfo5 = uicontrol('Style','text', 'String',resultonsamp,'Position',[50,fheight-300,400,20]);
+    resultinfo6 = uicontrol('Style','text', 'String',resultdescamp,'Position',[50,fheight-325,400,20]);
+    resultinfo7 = uicontrol('Style','text', 'String',resultslow,'Position',[50,fheight-350,400,20]);    
     resultinfo8a = uicontrol('Style','text', 'String','Enter age (integer):','Position',[50,fheight-425,200,20]);
     resultinputage = uicontrol('Style','edit', 'String','Skip age','Position',[50,fheight-450,200,20],'Callback',@agebutton_Callback);
     resultinfo9a = uicontrol('Style','text', 'String','Enter number of channels (integer):','Position',[50,fheight-475,240,20]);
     resultinputnumchan = uicontrol('Style','edit', 'String',resultnumchanstr,'Position',[50,fheight-500,240,20],'Callback',@numchanbutton_Callback);
     resultinfo10a = uicontrol('Style','text', 'String','Enter focus ID (integer):','Position',[50,fheight-525,240,20]);
     resultinputfocusid = uicontrol('Style','edit', 'String',resultfocusidstr,'Position',[50,fheight-550,240,20],'Callback',@focusidbutton_Callback);
-    resultinfo11 = uicontrol('Style','text', 'String','Enter regions (e.g. FTP left):','Position',[50,fheight-575,240,20]);
-    resultinputregions = uicontrol('Style','edit', 'String',resultregionsstr,'Position',[50,fheight-600,240,20],'Callback',@regionsbutton_Callback);
-    resultinfoBEMS = uicontrol('Style','text', 'String','BEMS: ','Position',[50,fheight-625,400,20]);
-    savebutton = uicontrol('Style','pushbutton', 'String','Save and close','Position',[50,fheight-650,200,20],'Callback',@savebutton_Callback);
+    resultinfoBEMS = uicontrol('Style','text', 'String','BEMS: ','Position',[50,fheight-575,400,20]);
+    savebutton = uicontrol('Style','pushbutton', 'String','Save and close','Position',[50,fheight-600,200,20],'Callback',@savebutton_Callback);
     ha = axes('Units','pixels','Position',[5,fheight-220,440,200]);
-    align([savebutton,resultinfo1,resultinfo2,resultinfo3,resultinfo4,resultinfo5,resultinfo6,resultinfo7,resultinfo8a,resultinputage,resultinfo9a,resultinputnumchan, resultinfo10a, resultinputfocusid, resultinfo11, resultinputregions, resultinfoBEMS],'Center','None');
+    align([savebutton,resultinfo1,resultinfo2,resultinfo3,resultinfo4,resultinfo5,resultinfo6,resultinfo7,resultinfo8a,resultinputage,resultinfo9a,resultinputnumchan, resultinfo10a, resultinputfocusid, resultinfoBEMS],'Center','None');
     f.Units = 'normalized';
     ha.Units = 'normalized';
     savebutton.Units = 'normalized';
@@ -402,8 +407,6 @@ function out = qIEDScorePipeline(electrode,sample)
     resultinfo9a.Units = 'normalized';
     resultinputnumchan.Units = 'normalized';
     resultinfo10a.Units = 'normalized';
-    resultinfo11.Units = 'normalized';
-    resultinputregions.Units = 'normalized';
     resultinputfocusid.Units = 'normalized';
     resultinfoBEMS.Units = 'normalized';
     fig_signal = plot(x,signal);
@@ -482,16 +485,8 @@ function out = qIEDScorePipeline(electrode,sample)
             resultfocusidstr.String = "Invalid";
             return;
         end
-        snippet.focusIDvisual = focusIDvisual;
-      
-         regionvisual = resultinputregions.String;
-         
-%         Skipping this check for now. We only use this value to make
-%         the marking process easier.
-%         if(resultinputregions.String == "Invalid")
-%             return;
-%         end
-        snippet.regionvisual = regionvisual;
+        snippet.focusIDvisual = focusIDvisual;     
+
         snippet.EEGfilepath = EEG.setname;
         
         %Use clickedsample/srate as postfix (store one unique IED-candidate per
@@ -500,7 +495,7 @@ function out = qIEDScorePipeline(electrode,sample)
         snippetpostfix = num2str(round(clicksample/srate));
         fileName = ['snippet_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
-        filePath = fullfile(pwd, 'output', fileName);            
+        filePath = fullfile(outputfolder, fileName);            
         save(filePath, 'snippet');
         close(f)
     end

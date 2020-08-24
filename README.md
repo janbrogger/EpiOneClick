@@ -9,7 +9,8 @@ Take a look at the demo.m script.
 Look up the "demo" script.
 
 1. Change the Matlab path to the directory of this tool
-2. Call the EpiOneClick method, for example: EpiOneClick('example-eeg\janbrogger.e');
+2. Edit folders in "EpiOneClickSettings.m".
+3. Call the EpiOneClick method, for example: EpiOneClick('example-eeg\janbrogger.e');
 
 # Bullet points for successful annotation:
 -Choose optimal channel.

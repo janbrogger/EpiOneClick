@@ -1,5 +1,4 @@
-function EpiOneClick(filePath)
-
+function EpiOneClick(filePath)  
     disp(['Opening new EEG file ' filePath] );    
     %Start up EEGLAB if pop_fileio is not in the path   
     if not(exist('pop_fileio', 'file'))
