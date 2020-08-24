@@ -1,12 +1,12 @@
-% qIEDScorePipeline() - Purpose: To annotate IEDs automatically only from manually marked peaks, 
-%   and then compare the resulting measures with results from manual
-%   annotations.
+% qIEDScorePipeline()  
+%
+% Purpose: To annotate IEDs automatically only from % manually marked peaks.
 % Usage:
 %   >>  out = qIED( electrode, time );
 %
 % Inputs:
-%   electrode       - first input of the function
-%   time            - timesample clicked
+%   electrode       - clicked channel/electrode
+%   time            - clicked timesample
 %    
 % Outputs:
 %   Start, peak, end, slowend.
@@ -34,7 +34,7 @@ function out = qIEDScorePipeline(electrode,sample)
     settings = EpiOneClickSettings();
     EEG = evalin('base','EEG');
     srate = EEG.srate;
-    samplescale = (1/500)*srate; %This variable replaces originally project specific hardcoded sample-related calculations.
+    samplescale = 500/srate; %This variable replaces originally project specific hardcoded sample-related calculations.
     
     %Output folder
     outputfolder = pwd;
@@ -86,7 +86,7 @@ function out = qIEDScorePipeline(electrode,sample)
     EEGdata = eegdata(:,(clicksample-siglengthBefore):(clicksample+siglengthAfter));
     x = 1:1:length(signal);
     t_spikepeak = ceil(length(signal)/2);
-    searchdistance = round(25*samplescale);
+    searchdistance = round(25/samplescale);
     xaroundpeak = t_spikepeak-searchdistance:1:t_spikepeak+searchdistance;
     yaroundpeak = signal(xaroundpeak);
     %locate peak indexes, then convert x-values back to global index
@@ -105,7 +105,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %has a lower voltage and delta x is lower than 0.625 delta y, then
     %replace spike start with this minimum. 0.625 relates to aspect ratio
     %in visual analysis (1cm per ?V and 3cm per second).
-    searchdistance = round(100*samplescale);
+    searchdistance = round(100/samplescale);
     xaroundstart = t_spikepeak-searchdistance:1:t_spikepeak;
     yaroundstart = signal(xaroundstart);
     [minimalogic, minimaprominence] = islocalmin(yaroundstart);
@@ -142,7 +142,7 @@ function out = qIEDScorePipeline(electrode,sample)
     %First, go with the local minimum furthest away from peak. If there is 
     %another local minimum closer to peak for which the slope doubles and higher
     %matlabprominence, or if voltage is lower, choose this minimum instead.
-    lesserend = min(IEDspikepeak+(100*samplescale), length(signal)); 
+    lesserend = min(IEDspikepeak+(100/samplescale), length(signal)); 
     xaroundend = IEDspikepeak:1:lesserend;
     yaroundend = signal(xaroundend);
     [minimalogic, minimaprominence] = islocalmin(yaroundend);
@@ -185,15 +185,15 @@ function out = qIEDScorePipeline(electrode,sample)
     % of high voltage difference between start and stop.
     % Exaxtareagfitsubtrapz subtracts area under line between start and
     % stop voltage.
-    minstartpos = IEDspikeend+83*samplescale;
-    lesserend = min(IEDspikeend+400*samplescale, length(signal));
+    minstartpos = IEDspikeend+83/samplescale;
+    lesserend = min(IEDspikeend+400/samplescale, length(signal));
     hasSlow = minstartpos < length(signal);
     %calculate slow-wave only if the signal is long enough for a slow wave
 
     slowX = (IEDspikeend:1:lesserend);
     slowsignal = [slowX; signal(slowX)];
     slowXformin = IEDspikeend:1:lesserend;
-    slowYformin = smoothdata(signal(slowXformin),2,'movmean',(83*samplescale));
+    slowYformin = smoothdata(signal(slowXformin),2,'movmean',(83/samplescale));
     [slowminima, slowminimaprominences] = islocalmin(slowYformin); 
     %inverseslowY = max(slowYformin)-slowYformin; %try findpeaks method
     %[Minima, MinIdx] = findpeaks(inverseslowY); %try findpeaks method
@@ -247,8 +247,8 @@ function out = qIEDScorePipeline(electrode,sample)
         sAfterDischargeLength = length(slowsignal(2, :));
         sAfterDischargeLastidx = slowsignal(1,sAfterDischargeLength);
         sAfterDischargeFirstidx = slowsignal(1,1);
-        gfoptions.Lower = [(-2000*samplescale) sAfterDischargeFirstidx 0];
-        gfoptions.Upper = [(2000*samplescale) sAfterDischargeLastidx (sAfterDischargeLength)];
+        gfoptions.Lower = [(-2000/samplescale) sAfterDischargeFirstidx 0];
+        gfoptions.Upper = [(2000/samplescale) sAfterDischargeLastidx (sAfterDischargeLength)];
         sADareaforplot = 0; integralgfit = 0; exactareagfit = 0; exactareagfitsubtrapz = 0; integraltrapz = 0;
 
         gfit = fit(slowsignal(1, :).', (slowsignal(2, :)+afterDischShift).','gauss1', gfoptions);
@@ -275,10 +275,10 @@ function out = qIEDScorePipeline(electrode,sample)
     descpeakexactAmplitude = signal(IEDspikepeak) - signal(IEDspikeend);
     descpeakamplitude = round(descpeakexactAmplitude); deschampl(chan) = descpeakamplitude;
     FH_duration = IEDspikepeak - IEDspikestart;    
-    FH_exactslope = onsetpeakamplitude/FH_duration; onsetslope(chan) = FH_exactslope*srate/1000;
+    FH_exactslope = onsetpeakamplitude/FH_duration; onsetslope(chan) = FH_exactslope*(srate/1000);
     FH_fullslope = round(FH_exactslope,1);   
     SH_duration = IEDspikeend - IEDspikepeak;
-    SH_exactfullslope = descpeakamplitude/SH_duration; descslope(chan) = SH_exactfullslope*srate/1000;
+    SH_exactfullslope = descpeakamplitude/SH_duration; descslope(chan) = SH_exactfullslope*(srate/1000);
     SH_fullslope = round(SH_exactfullslope,1);
     % Asymmetry, ascending slope to descending slope ratio
     onset_desc_ratio = FH_fullslope/SH_fullslope;
@@ -287,7 +287,7 @@ function out = qIEDScorePipeline(electrode,sample)
 
     %Frost used 1 sample per 4 msec and calculated 2nd derivate aroun 5
     %samplepoints. We use 500 samples/sec, 1sample/2msec. 
-    frostx = (IEDspikepeak-round(4*samplescale)):round(2*samplescale):(IEDspikepeak+round(4*samplescale));
+    frostx = (IEDspikepeak-round(4/samplescale)):round(2/samplescale):(IEDspikepeak+round(4/samplescale));
     frosty = signal(frostx);
     frostsharpness(chan) = (abs( (frosty(5)-(2*frosty(3))+frosty(1))/2 ))/4;   
     
