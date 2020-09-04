@@ -46,11 +46,15 @@ function EpiOneClick(filePath)
             ekgindex = find(contains(chanlocslowcase, 'ekg'));            
             photicindex = find(contains(chanlocslowcase, 'photic'));  
             emgindex = find(contains(chanlocslowcase, 'emg'));
+            rateindex = find(contains(chanlocslowcase, 'rate'));
+            ibiindex = find(contains(chanlocslowcase, 'ibi'));
+            burstsindex = find(contains(chanlocslowcase, 'bursts'));
+            supprindex = find(contains(chanlocslowcase, 'suppr'));
             
             disp('Flipping data');
             EEG.data = -EEG.data;
-            disp('Rereferencing data except EKG and photic');
-            EEG = pop_reref( EEG, [],'exclude',[ekgindex photicindex emgindex]);  
+            disp('Rereferencing data except EKG, photic, Rate, IBI, Bursts, Suppr');
+            EEG = pop_reref( EEG, [],'exclude',[ekgindex photicindex emgindex rateindex ibiindex burstsindex supprindex]);  
             %notch
             disp('Filtering data');
             EEG = pop_eegfilt(EEG, 48, 52, 3300, 1, 1, 0);
