@@ -38,7 +38,9 @@ function EpiOneClick(filePath)
                 EEG = pop_select( EEG,'nochannel',exclIndex);
                 disp(['Empty channels dropped:' exclIndex]);
             end
-           
+            
+            disp('Removing unused channels');
+            EEG = pop_select( EEG,'nochannel',{'Rate' 'IBI' 'Bursts' 'Suppr'});                                                                          
             EEG = eeg_checkset( EEG );
 
             disp('Looking for EKG, EMG and photic...');
