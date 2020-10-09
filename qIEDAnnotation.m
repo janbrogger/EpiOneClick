@@ -30,8 +30,9 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-function out = qIEDScorePipeline(electrode,sample)
+function out = qIEDAnnotation(electrode,sample)
     settings = EpiOneClickSettings();
+    out = {};
     EEG = evalin('base','EEG');
     srate = EEG.srate;
     samplescale = 500/srate; %This variable replaces originally project specific hardcoded sample-related calculations.
@@ -262,6 +263,7 @@ function out = qIEDScorePipeline(electrode,sample)
         % overestemitated due to high-frequency activity. Smoothing? Filtering?
         integraltrapz = trapz((slowsignal(1, :)+afterDischShift).', (slowsignal(2, :)+afterDischShift)) ... 
                         - trapz([1 sAfterDischargeLength], [(slowsignal(2, 1)+afterDischShift).', (slowsignal(2, sAfterDischargeLength)+afterDischShift)]);
+        slowwavewebertrapz = integraltrapz/srate;
     else
         sADareaforplot = 0; integralgfit = 0; exactareagfit = 0; exactareagfitsubtrapz = 0; integraltrapz = 0;
         IEDslowend = IEDspikeend;
@@ -427,13 +429,34 @@ function out = qIEDScorePipeline(electrode,sample)
     legend([fig_signal fig_IED fig_slow_aprox fig_sp fig_so],'EEG signal', 'IED signal', 'Slow-wave approximation', 'Spike peak', 'Spike onset, spike end and slow-wave end', 'Location', 'southoutside')
     pbaspect([xaspectr yaspectr 1]);        
     set(gca, 'xtick', [], 'ytick', []);
-    out = {IEDspikestart+clicksample-siglengthBefore, IEDspikepeak+clicksample-siglengthBefore, IEDspikeend+clicksample-siglengthBefore, IEDslowend+clicksample-siglengthBefore};
-
+    waitfor(f);
+    out = getappdata(0,'outputtoDB');
 
 %% Supporting functions. (Save,..)
     
     function savebutton_Callback(source,eventdata) 
-    % Save snippet and data to mat-file and close window.          
+        % Save snippet and data to mat-file and close window. 
+        % Save measures and marks to output going to ScorePipeline.
+        outputtoDB = {IEDspikestart+clicksample-siglengthBefore, ... 
+        IEDspikepeak+clicksample-siglengthBefore, ...
+        IEDspikeend+clicksample-siglengthBefore, ...
+        IEDslowend+clicksample-siglengthBefore, ...
+        descpeakamplitude, ...
+        onsetslope(chan), ...
+        spiketobackground, ...
+        slowwaveweber, ...
+        slowwavewebertrapz, ...
+        onsetpeakamplitude, ...
+        descslope(chan), ...
+        frostsharpness(chan), ...
+        sduration(chan), ...
+        frostsharpness(chan)};
+        setappdata(0,'outputtoDB',outputtoDB);
+        
+        %Get studyid from ScorePipeline
+        snippet.studyid = getappdata(0,'studyid');
+        
+        
         snippet.srate = EEG.srate;
         snippet.chanLocs = EEG.chanlocs;
         %snippet.clickedChannel = EEG.chanloc(
@@ -455,6 +478,7 @@ function out = qIEDScorePipeline(electrode,sample)
         snippet.SpikeToBackground = spiketobackground;
         snippet.PrecedingRMS = ongoingBG_RMS;
         snippet.SlowWaveWeber = slowwaveweber;
+        snippet.SlowWaveTrapz = slowwavewebertrapz;
         snippet.hasSlow = hasSlow;
         snippet.slowEndX = IEDslowend;
         snippet.sduration = sduration(chan);
@@ -472,19 +496,20 @@ function out = qIEDScorePipeline(electrode,sample)
             snippet.BEMS_slow = BEMS_slow;  
         end        
         
-        %Only proceed to save when data have been entered correctly
+        %We don't need numchan and focusID for now. Commenting out error
+        %checks
         numchanvisual  = str2double(resultinputnumchan.String);
-        if(isnan(numchanvisual))
-            resultnumchanstr.String = "Invalid";
-            return;
-        end        
+%         if(isnan(numchanvisual))
+%             resultnumchanstr.String = "Invalid";
+%             return;
+%         end        
         snippet.numchanvisual = numchanvisual;
         
         focusIDvisual = str2double(resultinputfocusid.String);
-        if(isnan(focusIDvisual))
-            resultfocusidstr.String = "Invalid";
-            return;
-        end
+%         if(isnan(focusIDvisual))
+%             resultfocusidstr.String = "Invalid";
+%             return;
+%         end
         snippet.focusIDvisual = focusIDvisual;     
 
         snippet.EEGfilepath = EEG.setname;
@@ -492,8 +517,9 @@ function out = qIEDScorePipeline(electrode,sample)
         %Use clickedsample/srate as postfix (store one unique IED-candidate per
         %second.
         [filepath,name,ext] = fileparts(EEG.setname);  
+        snippetprefix = num2str(snippet.studyid);
         snippetpostfix = num2str(round(clicksample/srate));
-        fileName = ['snippet_' name '_' snippetpostfix ];
+        fileName = [snippetprefix 'snippet_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
         filePath = fullfile(outputfolder, fileName);            
         save(filePath, 'snippet');
@@ -597,4 +623,5 @@ function out = qIEDScorePipeline(electrode,sample)
 %           return;
 %         end
     end
+
 end 
