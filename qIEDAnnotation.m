@@ -454,7 +454,7 @@ function out = qIEDAnnotation(electrode,sample)
         setappdata(0,'outputtoDB',outputtoDB);
         
         %Get studyid from ScorePipeline
-        snippet.studyid = getappdata(0,'studyid');
+        snippet.SearchResultStudyId = getappdata(0,'SearchResultStudyId');
         
         
         snippet.srate = EEG.srate;
@@ -517,7 +517,7 @@ function out = qIEDAnnotation(electrode,sample)
         %Use clickedsample/srate as postfix (store one unique IED-candidate per
         %second.
         [filepath,name,ext] = fileparts(EEG.setname);  
-        snippetprefix = num2str(snippet.studyid);
+        snippetprefix = num2str(snippet.SearchResultStudyId);
         snippetpostfix = num2str(round(clicksample/srate));
         fileName = [snippetprefix 'snippet_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
