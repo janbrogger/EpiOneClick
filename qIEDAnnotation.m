@@ -431,6 +431,8 @@ function out = qIEDAnnotation(electrode,sample)
     set(gca, 'xtick', [], 'ytick', []);
     waitfor(f);
     out = getappdata(0,'outputtoDB');
+    nothing = [];
+    setappdata(0,'outputtoDB',nothing); %CLEANUP
 
 %% Supporting functions. (Save,..)
     
