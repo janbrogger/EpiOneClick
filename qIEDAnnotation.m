@@ -484,35 +484,36 @@ function out = qIEDAnnotation(electrode,sample)
         snippet.hasSlow = hasSlow;
         snippet.slowEndX = IEDslowend;
         snippet.sduration = sduration(chan);
-                      
-        resultagestr = resultinputage.String;        
-        input_age = str2double(resultagestr);
-        if isnan(input_age) || fix(input_age) ~= input_age
-          resultinputage.String = "Invalid";
-        else
-            snippet.patientage = input_age;
-            snippet.BEMS_age = BEMS_age;
-            snippet.BEMS_descamp = BEMS_descamp;
-            snippet.BEMS_onsslope = BEMS_onsslope;
-            snippet.BEMS_spiketobg = BEMS_spiketobg;
-            snippet.BEMS_slow = BEMS_slow;  
-        end        
+
+        %Commented out for P3.
+%         resultagestr = resultinputage.String;        
+%         input_age = str2double(resultagestr);
+%         if isnan(input_age) || fix(input_age) ~= input_age
+%           resultinputage.String = "Invalid";
+%         else
+%             snippet.patientage = input_age;
+%             snippet.BEMS_age = BEMS_age;
+%             snippet.BEMS_descamp = BEMS_descamp;
+%             snippet.BEMS_onsslope = BEMS_onsslope;
+%             snippet.BEMS_spiketobg = BEMS_spiketobg;
+%             snippet.BEMS_slow = BEMS_slow;  
+%         end        
         
         %We don't need numchan and focusID for now. Commenting out error
         %checks
-        numchanvisual  = str2double(resultinputnumchan.String);
+%        numchanvisual  = str2double(resultinputnumchan.String);
 %         if(isnan(numchanvisual))
 %             resultnumchanstr.String = "Invalid";
 %             return;
 %         end        
-        snippet.numchanvisual = numchanvisual;
+%        snippet.numchanvisual = numchanvisual;
         
-        focusIDvisual = str2double(resultinputfocusid.String);
+%        focusIDvisual = str2double(resultinputfocusid.String);
 %         if(isnan(focusIDvisual))
 %             resultfocusidstr.String = "Invalid";
 %             return;
 %         end
-        snippet.focusIDvisual = focusIDvisual;     
+%        snippet.focusIDvisual = focusIDvisual;     
 
         snippet.EEGfilepath = EEG.setname;
         
