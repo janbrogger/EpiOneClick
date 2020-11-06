@@ -268,6 +268,7 @@ function out = qIEDAnnotation(electrode,sample)
         sADareaforplot = 0; integralgfit = 0; exactareagfit = 0; exactareagfitsubtrapz = 0; integraltrapz = 0;
         IEDslowend = IEDspikeend;
         IEDslowendy = IEDspikeendy;
+        slowwavewebertrapz = 0;
         slowwaveweber = 0;
     end %hasslow
     sduration(chan) = (IEDspikeend - IEDspikestart);
