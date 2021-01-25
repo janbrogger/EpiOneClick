@@ -107,7 +107,7 @@ function out = qIEDAnnotation(electrode,sample)
     %replace spike start with this minimum. 0.625 relates to aspect ratio
     %in visual analysis (1cm per ?V and 3cm per second).
     searchdistance = round(100/samplescale);
-    xaroundstart = t_spikepeak-searchdistance:1:t_spikepeak;
+    xaroundstart = IEDspikepeak-searchdistance:1:IEDspikepeak;
     yaroundstart = signal(xaroundstart);
     [minimalogic, minimaprominence] = islocalmin(yaroundstart);
     if(all(minimalogic<1))
@@ -158,8 +158,8 @@ function out = qIEDAnnotation(electrode,sample)
     for i = 2:1:iterationlength
         %Replace currentminimum if next local minimum has
         %double the slope and greater matlab-prominence.
-        btempslope = (tempminimumy-IEDspikepeaky) / (tempminimum-t_spikepeak);
-        bcurrentslope = ((signal(xendminima(i))-IEDspikepeaky)) / (xendminima(i)-t_spikepeak);
+        btempslope = (tempminimumy-IEDspikepeaky) / (tempminimum-IEDspikepeak);
+        bcurrentslope = ((signal(xendminima(i))-IEDspikepeaky)) / (xendminima(i)-IEDspikepeak);
         binterslope = (signal(xendminima(i))- tempminimumy) / (xendminima(i)-tempminimum);
         bcurrentprominence = pminima(i);
         bcurrentVolt = signal(xendminima(i));
