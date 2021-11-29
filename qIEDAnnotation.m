@@ -520,10 +520,11 @@ function out = qIEDAnnotation(electrode,sample)
         
         %Use clickedsample/srate as postfix (store one unique IED-candidate per
         %second.
-        [filepath,name,ext] = fileparts(EEG.setname);  
-        snippetprefix = num2str(snippet.SearchResultStudyId);
-        snippetpostfix = num2str(round(clicksample/srate));
-        fileName = [snippetprefix 'snippet_' name '_' snippetpostfix ];
+        [~,name,~] = fileparts(EEG.setname);  
+        snippetprefix = settings.Project;
+        snippetrater = settings.Rater;
+        snippetpostfix = num2str(floor(clicksample/srate));
+        fileName = [snippetprefix '_snippet_' snippetrater '_' name '_' snippetpostfix ];
         snippet.BEMS_filename = fileName;
         filePath = fullfile(outputfolder, fileName);            
         save(filePath, 'snippet');
